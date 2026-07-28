@@ -1,27 +1,52 @@
 """
-status_server.py — Servidor local para o botão Atualizar do mapa
-Execute via iniciar.bat (duplo clique) ou:
-    python status_server.py
+status_server.py
+- Local: python status_server.py
+- Railway: define env vars SSH_PRIVATE_KEY, SSH_HOST (opt), SSH_USER (opt)
 """
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import subprocess, json, os, time
+import os, json, time, subprocess, tempfile
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
-PORT        = 5678
-KEY         = os.path.expanduser(r'~\Downloads\vini.pem')
-REMOTE      = 'vinicius-argo@20.94.160.24'
-SCRIPT      = '/home/vinicius-argo/generate_map_status.py'
-CACHE_FILE  = '/home/vinicius-argo/mapserver/status_cache.json'
-STATUS_JS   = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'status.js')
-CACHE_MAX_AGE = 360  # segundos — usa cache se tiver menos de 6 min
+PORT       = int(os.environ.get('PORT', 5678))
+SSH_HOST   = os.environ.get('SSH_HOST',  '20.94.160.24')
+SSH_USER   = os.environ.get('SSH_USER',  'vinicius-argo')
+SCRIPT     = '/home/vinicius-argo/generate_map_status.py'
+CACHE_FILE = '/home/vinicius-argo/mapserver/status_cache.json'
+CACHE_MAX_AGE = 360   # segundos
+BASE_DIR   = Path(__file__).parent
+
+# ── Chave SSH: env var (Railway) ou arquivo local
+_SSH_KEY_ENV  = os.environ.get('SSH_PRIVATE_KEY', '')
+_SSH_KEY_FILE = os.environ.get('SSH_KEY_FILE',
+                os.path.expanduser(r'~\Downloads\vini.pem'))
+_key_tmp = None
+if _SSH_KEY_ENV:
+    _key_tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False)
+    key_content = _SSH_KEY_ENV.replace('\\n', '\n')
+    _key_tmp.write(key_content)
+    _key_tmp.flush()
+    try: os.chmod(_key_tmp.name, 0o600)
+    except: pass
+    _SSH_KEY_FILE = _key_tmp.name
+
+MIME = {
+    '.html': 'text/html; charset=utf-8',
+    '.js':   'application/javascript; charset=utf-8',
+    '.css':  'text/css',
+    '.json': 'application/json',
+    '.ico':  'image/x-icon',
+}
+
+# ── SSH helpers ──────────────────────────────────────────────────────────────
 
 def ssh(cmd, timeout=45):
     r = subprocess.run(
-        ['ssh', '-i', KEY,
+        ['ssh', '-i', _SSH_KEY_FILE,
          '-o', 'StrictHostKeyChecking=no',
          '-o', 'ConnectTimeout=12',
          '-o', 'ServerAliveInterval=10',
-         REMOTE, cmd],
+         f'{SSH_USER}@{SSH_HOST}', cmd],
         capture_output=True, text=True, timeout=timeout
     )
     if r.returncode != 0:
@@ -29,7 +54,6 @@ def ssh(cmd, timeout=45):
     return r.stdout.strip()
 
 def fetch_status():
-    # Verifica se o cache no servidor está fresco
     try:
         age_str = ssh(
             f'python3 -c "import os,time; f=\\"{CACHE_FILE}\\"; '
@@ -41,12 +65,10 @@ def fetch_status():
         cache_age = 9999
 
     if cache_age < CACHE_MAX_AGE:
-        # Cache fresco: só faz cat (muito rápido)
-        raw = ssh(f'cat {CACHE_FILE}', timeout=15)
+        raw    = ssh(f'cat {CACHE_FILE}', timeout=15)
         source = f'cache ({cache_age}s atrás)'
     else:
-        # Cache velho/ausente: roda o script completo
-        raw = ssh(f'python3 {SCRIPT}', timeout=50)
+        raw    = ssh(f'python3 {SCRIPT}', timeout=50)
         source = 'script ao vivo'
 
     data = json.loads(raw)
@@ -57,7 +79,7 @@ def build_status_js(data):
     def q(v):
         if v is None: return 'null'
         return '"' + str(v).replace('\\', '\\\\').replace('"', '\\"') + '"'
-    lines = ['// Auto-gerado — nao editar manualmente', 'const PIPELINE_STATUS = {']
+    lines = ['// Auto-gerado', 'const PIPELINE_STATUS = {']
     for pid, p in data['pipelines'].items():
         history  = json.dumps(p.get('history',  []), ensure_ascii=False)
         last_log = json.dumps(p.get('last_log', []), ensure_ascii=False)
@@ -73,21 +95,28 @@ def build_status_js(data):
     lines.append(f'const STATUS_UPDATED_AT = "{brt.strftime("%d/%m/%Y %H:%M")} BRT";')
     return '\n'.join(lines) + '\n'
 
+# ── HTTP Handler ─────────────────────────────────────────────────────────────
+
 class Handler(BaseHTTPRequestHandler):
+
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self._cors()
         self.end_headers()
 
     def do_GET(self):
-        if self.path != '/refresh':
-            self.send_response(404); self.end_headers(); return
+        if self.path.split('?')[0] == '/refresh':
+            self._handle_refresh()
+        else:
+            self._serve_static()
+
+    def _handle_refresh(self):
         t0 = time.time()
         try:
-            data = fetch_status()
-            js   = build_status_js(data)
-            with open(STATUS_JS, 'w', encoding='utf-8') as f:
-                f.write(js)
+            data    = fetch_status()
+            js      = build_status_js(data)
+            status_path = BASE_DIR / 'status.js'
+            status_path.write_text(js, encoding='utf-8')
             elapsed = round(time.time() - t0, 1)
             body = json.dumps({
                 'ok': True,
@@ -98,29 +127,49 @@ class Handler(BaseHTTPRequestHandler):
                 'source':    data.get('_source', ''),
                 'elapsed':   elapsed,
             }, ensure_ascii=False).encode()
-            self._respond(200, body)
-            src = data.get('_source', '')
-            print(f'  OK em {elapsed}s via {src} ({len(data["pipelines"])} pipelines)')
+            self._respond(200, body, 'application/json; charset=utf-8')
+            print(f'  OK {elapsed}s — {data.get("_source","")} ({len(data["pipelines"])} pipelines)')
         except Exception as e:
             body = json.dumps({'ok': False, 'error': str(e)}).encode()
-            self._respond(500, body)
+            self._respond(500, body, 'application/json; charset=utf-8')
             print(f'  ERRO: {e}')
 
-    def _respond(self, code, body):
+    def _serve_static(self):
+        path = self.path.split('?')[0]
+        if path == '/':
+            path = '/index.html'
+        filepath = BASE_DIR / path.lstrip('/')
+        # Segurança: não sair do BASE_DIR
+        try: filepath.resolve().relative_to(BASE_DIR.resolve())
+        except ValueError:
+            self.send_response(403); self.end_headers(); return
+        if not filepath.exists() or not filepath.is_file():
+            self.send_response(404); self.end_headers(); return
+        data = filepath.read_bytes()
+        ct   = MIME.get(filepath.suffix, 'application/octet-stream')
+        self._respond(200, data, ct)
+
+    def _respond(self, code, body, content_type):
         self.send_response(code)
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Content-Type', content_type)
         self.send_header('Content-Length', str(len(body)))
+        self._cors()
         self.end_headers()
         self.wfile.write(body)
+
+    def _cors(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
 
     def log_message(self, fmt, *args):
         print(f'[{datetime.now().strftime("%H:%M:%S")}] {fmt % args}')
 
+# ── Start ────────────────────────────────────────────────────────────────────
+
 print('=' * 52)
-print('  Mapa do Servidor — Status Server')
-print(f'  Porta: http://localhost:{PORT}/refresh')
-print('  Cache servidor: atualizado a cada 5 min (cron)')
-print('  Deixe esta janela aberta.')
+print(f'  Mapa do Servidor  —  porta {PORT}')
+print(f'  SSH: {SSH_USER}@{SSH_HOST}')
+print(f'  Chave: {"env var" if _SSH_KEY_ENV else _SSH_KEY_FILE}')
 print('=' * 52)
-HTTPServer(('localhost', PORT), Handler).serve_forever()
+HTTPServer(('0.0.0.0', PORT), Handler).serve_forever()

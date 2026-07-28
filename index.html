@@ -1081,8 +1081,13 @@ async function refreshStatus() {
   btn.disabled = true;
   btn.textContent = '↻ Buscando…';
   badge.textContent = '⏳ conectando…';
+  const apiBase = (typeof API_URL !== 'undefined' && API_URL)
+    ? API_URL.replace(/\/$/, '')
+    : ((['localhost','127.0.0.1'].includes(window.location.hostname))
+       ? 'http://localhost:5678'
+       : window.location.origin);
   try {
-    const resp = await fetch('http://localhost:5678/refresh', { signal: AbortSignal.timeout(45000) });
+    const resp = await fetch(apiBase + '/refresh', { signal: AbortSignal.timeout(45000) });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const result = await resp.json();
     if (!result.ok) throw new Error(result.error || 'Erro desconhecido');

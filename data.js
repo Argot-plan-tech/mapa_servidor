@@ -3,6 +3,8 @@
 // =============================================================================
 
 const LOGIN_PWD = 'argoplan';   // altere aqui para mudar a senha
+const API_URL   = '';           // deixe vazio para detectar automaticamente
+                                // ou coloque ex: 'https://mapa-servidor.up.railway.app'
 
 const NODES = [
 
