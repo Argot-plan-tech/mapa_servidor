@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mapa do Servidor — Argoplan</title>
+<script src="data.js"></script>
+<script src="status.js"></script>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+:root {
+  --bg:#0f1117; --bg2:#1a1d2e; --bg3:#252840; --border:#2e3260;
+  --text:#e2e4f0; --text2:#8b90b8; --accent:#6c8fff; --accent2:#a78bfa;
+  --ok:#34d399; --fail:#f87171; --warn:#fbbf24; --neutral:#8b90b8;
+  --panel-w:420px;
+}
+[data-theme="light"] {
+  --bg:#f4f5fb; --bg2:#ffffff; --bg3:#e8eaf6; --border:#c5cae9;
+  --text:#1a1d3a; --text2:#5c6080; --accent:#3d5afe; --accent2:#7c4dff;
+  --ok:#10b981; --fail:#ef4444; --warn:#d97706; --neutral:#6b7280;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── TOP BAR ── */
+#topbar {
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; flex-wrap: wrap;
+}
+#topbar h1 { font-size: 14px; font-weight: 700; color: var(--accent); white-space: nowrap; margin-right: 4px; }
+.sep { width: 1px; height: 20px; background: var(--border); flex-shrink:0; }
+.filter-btn {
+  padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
+  background: transparent; color: var(--text2); cursor: pointer; font-size: 12px;
+  transition: all .15s;
+}
+.filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.view-btn {
+  padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
+  background: transparent; color: var(--text2); cursor: pointer; font-size: 12px;
+  transition: all .15s;
+}
+.view-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+.view-btn.active { background: var(--accent2); border-color: var(--accent2); color: #fff; font-weight: 600; }
+#search-wrap { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+#search { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; color: var(--text); font-size: 12px; width: 180px; }
+#search:focus { outline: none; border-color: var(--accent); }
+#theme-btn {
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+  border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px;
+}
+#status-badge {
+  font-size: 11px; color: var(--text2); white-space: nowrap;
+  padding: 3px 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+}
+#refresh-btn {
+  padding: 4px 12px; border-radius: 6px; border: 1px solid var(--accent);
+  background: transparent; color: var(--accent); cursor: pointer; font-size: 12px;
+  transition: all .15s;
+}
+#refresh-btn:hover { background: var(--accent); color: #fff; }
+#refresh-btn:disabled { opacity: .5; cursor: wait; }
+
+/* ── MAIN AREA ── */
+#main { display: flex; flex: 1; overflow: hidden; position: relative; }
+#graph-container { flex: 1; position: relative; }
+#mynetwork { width: 100%; height: 100%; }
+
+/* ── LEGEND ── */
+#legend {
+  position: absolute; bottom: 12px; left: 12px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 16px; font-size: 13px; color: var(--text2);
+}
+#legend div { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+#legend div:last-child { margin-bottom: 0; }
+.dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── PILLS SIDEBAR ── */
+#pills {
+  position: absolute; top: 10px; right: calc(var(--panel-w) + 14px);
+  display: flex; flex-direction: column; gap: 4px; max-height: calc(100% - 20px);
+  overflow-y: auto; pointer-events: none;
+}
+#pills.panel-closed { right: 14px; }
+.pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 20px;
+  padding: 3px 10px; font-size: 11px; color: var(--text2);
+  cursor: pointer; pointer-events: all; white-space: nowrap; transition: border-color .15s;
+}
+.pill:hover { border-color: var(--accent); }
+.pill-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── SIDE PANEL ── */
+#panel {
+  width: var(--panel-w); background: var(--bg2); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+  transition: width .2s; flex-shrink: 0;
+}
+#panel.hidden { width: 0; }
+#panel-inner { padding: 16px; overflow-y: auto; flex: 1; }
+#panel-close {
+  position: absolute; top: 10px; right: 10px; background: var(--bg3);
+  border: none; color: var(--text2); cursor: pointer; border-radius: 50%;
+  width: 24px; height: 24px; font-size: 14px; display: flex; align-items: center; justify-content: center;
+}
+.panel-header { position: relative; margin-bottom: 12px; }
+.panel-title { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.2; padding-right: 30px; }
+.panel-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+  font-weight: 600; margin-top: 6px;
+}
+.badge-pipeline   { background: #1e3a5f; color: #6c8fff; }
+.badge-database   { background: #1a3a2a; color: #34d399; }
+.badge-external   { background: #2d2020; color: #f87171; }
+.badge-service    { background: #2a1f40; color: #a78bfa; }
+.badge-monitor    { background: #2d2a10; color: #fbbf24; }
+.badge-runner     { background: #202830; color: #38bdf8; }
+[data-theme="light"] .badge-pipeline { background: #e8edf8; color: #3d5afe; }
+[data-theme="light"] .badge-database { background: #e0f2f1; color: #00897b; }
+[data-theme="light"] .badge-external { background: #ffebee; color: #e53935; }
+[data-theme="light"] .badge-service  { background: #f3e5f5; color: #7b1fa2; }
+[data-theme="light"] .badge-monitor  { background: #fff8e1; color: #f57f17; }
+[data-theme="light"] .badge-runner   { background: #e1f5fe; color: #0277bd; }
+
+.section { margin-top: 14px; }
+.section-title {
+  font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase;
+  letter-spacing: .08em; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 8px;
+}
+.section-body { font-size: 12px; color: var(--text2); line-height: 1.6; }
+.kv { display: flex; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+.kv-key { color: var(--text2); min-width: 80px; flex-shrink: 0; }
+.kv-val { color: var(--text); }
+.tag {
+  display: inline-block; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 2px 7px; font-size: 11px; color: var(--text2); margin: 2px 2px 2px 0;
+}
+.proc-item { font-size: 11px; color: var(--text2); padding: 3px 0; border-bottom: 1px solid var(--border); font-family: monospace; }
+.table-block {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; margin-bottom: 8px;
+}
+.table-name { font-size: 12px; font-weight: 600; color: var(--accent); font-family: monospace; }
+.table-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.table-cols { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px; }
+.col-tag {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+  padding: 1px 5px; font-size: 10px; color: var(--text2); font-family: monospace;
+}
+.col-tag.key { border-color: var(--warn); color: var(--warn); }
+.step-list { list-style: none; padding: 0; }
+.step-list li { font-size: 11px; color: var(--text2); padding: 3px 0 3px 12px; position: relative; border-bottom: 1px dashed var(--border); }
+.step-list li:before { content: '›'; position: absolute; left: 0; color: var(--accent); }
+.step-list li:last-child { border-bottom: none; }
+.script-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.script-name { font-size: 11px; font-weight: 600; color: var(--accent2); font-family: monospace; margin-bottom: 6px; }
+.neighbor-link {
+  display: flex; align-items: center; gap: 6px; padding: 5px 8px; margin-bottom: 4px;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+  cursor: pointer; transition: border-color .15s; font-size: 12px;
+}
+.neighbor-link:hover { border-color: var(--accent); }
+.neighbor-dir { font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 600; flex-shrink: 0; }
+.dir-in  { background: #1a3a2a; color: var(--ok); }
+.dir-out { background: #1e3a5f; color: var(--accent); }
+.neighbor-label { color: var(--text); flex: 1; }
+.neighbor-edge-label { font-size: 10px; color: var(--text2); white-space: nowrap; }
+.key-table-block { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.key-table-name { font-size: 12px; font-weight: 600; color: var(--ok); font-family: monospace; }
+
+/* ── TIMELINE VIEW ── */
+#timeline-view {
+  display: none; flex: 1; padding: 16px 20px; overflow-y: auto;
+}
+#timeline-view.active { display: block; }
+#graph-container.tl-hidden { display: none; }
+#graph-container.sv-hidden  { display: none; }
+
+.tl-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+.tl-outer { min-width: 800px; overflow-x: auto; }
+.tl-header { display: flex; margin-bottom: 0; position: sticky; top: 0; background: var(--bg); z-index: 2; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+.tl-label-col { width: 150px; flex-shrink: 0; }
+.tl-axis { flex: 1; position: relative; height: 18px; }
+.tl-rows-wrap { position: relative; }
+.tl-row { display: flex; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--border); }
+.tl-row-label { width: 150px; flex-shrink: 0; font-size: 11px; color: var(--text2); text-align: right; padding-right: 12px; line-height: 1.3; }
+.tl-track { flex: 1; position: relative; height: 32px; }
+.tl-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--border); opacity: .4; }
+.tl-bar {
+  position: absolute; top: 3px; bottom: 3px; border-radius: 5px;
+  display: flex; align-items: center; padding: 0 7px;
+  font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden;
+  cursor: pointer; transition: opacity .15s; z-index: 1; min-width: 32px;
+}
+.tl-bar:hover { opacity: .8; filter: brightness(1.1); }
+.tl-bar-pipeline { background: #1e3a5f; color: #6c8fff; border: 1px solid #6c8fff55; }
+.tl-bar-monitor  { background: #2d2a10; color: #fbbf24; border: 1px solid #fbbf2455; }
+.tl-now { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fail); opacity: .75; z-index: 3; }
+.tl-now-lbl { position: absolute; top: -18px; font-size: 9px; color: var(--fail); transform: translateX(-50%); background: var(--bg); padding: 0 2px; }
+.tl-legend { display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: var(--text2); flex-wrap: wrap; }
+.tl-legend span { display: flex; align-items: center; gap: 5px; }
+.tl-swatch { width: 12px; height: 12px; border-radius: 2px; }
+
+.tl-table-wrap { margin-top: 24px; }
+.tl-table-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 10px; letter-spacing: .03em; }
+.tl-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tl-table thead tr { background: var(--bg3); }
+.tl-table th {
+  text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 700;
+  color: var(--text2); text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 2px solid var(--border); white-space: nowrap;
+}
+.tl-table td { padding: 9px 12px; color: var(--text); border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tl-table tbody tr:hover { background: var(--bg3); }
+.tl-table tbody tr:last-child td { border-bottom: none; }
+
+/* ── SERVER DASHBOARD ── */
+#server-view { display:none; flex:1; padding:20px 24px; overflow-y:auto; }
+#server-view.active { display:block; }
+#graph-container.sv-hidden { display:none; }
+
+.sv-hostname { font-size:15px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.sv-meta     { font-size:12px; color:var(--text2); margin-bottom:20px; }
+
+.sv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+.sv-card {
+  background:var(--bg2); border:1px solid var(--border); border-radius:10px;
+  padding:14px 16px;
+}
+.sv-card-label { font-size:10px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
+.sv-card-value { font-size:26px; font-weight:700; color:var(--text); line-height:1; }
+.sv-card-sub   { font-size:11px; color:var(--text2); margin-top:4px; }
+.sv-card.warn  { border-color:var(--warn); }
+.sv-card.crit  { border-color:var(--fail); }
+
+.sv-bar-wrap  { height:8px; background:var(--bg3); border-radius:4px; overflow:hidden; margin-top:8px; }
+.sv-bar-fill  { height:100%; border-radius:4px; transition:width .4s; }
+
+.sv-section-title { font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase;
+  letter-spacing:.08em; border-bottom:1px solid var(--border); padding-bottom:5px; margin-bottom:12px; }
+
+.sv-disk-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:12px; }
+.sv-disk-mount { width:110px; font-family:monospace; color:var(--text); flex-shrink:0; }
+.sv-disk-bar   { flex:1; height:10px; background:var(--bg3); border-radius:5px; overflow:hidden; }
+.sv-disk-bar-fill { height:100%; border-radius:5px; }
+.sv-disk-info  { width:130px; text-align:right; color:var(--text2); flex-shrink:0; }
+
+.sv-svc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; }
+.sv-svc-item {
+  display:flex; align-items:center; gap:8px; padding:8px 12px;
+  background:var(--bg2); border:1px solid var(--border); border-radius:8px; font-size:12px;
+}
+.sv-svc-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.sv-svc-label { color:var(--text); }
+
+/* ── DISK BANNER ── */
+#disk-banner {
+  padding: 7px 16px; font-size: 12px; display: flex; gap: 16px; flex-wrap: wrap;
+  align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+#disk-banner.has-critical { background: #2d1010; color: #fca5a5; border-color: #f87171; }
+#disk-banner.has-warn     { background: #2a2000; color: #fde68a; border-color: #fbbf24; }
+.disk-item { display: flex; align-items: center; gap: 6px; }
+.disk-item.clickable { cursor: pointer; border-bottom: 1px dashed currentColor; }
+.disk-item.clickable:hover { opacity: .8; }
+.disk-bar-wrap { width: 80px; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.disk-bar-fill { height: 100%; border-radius: 3px; }
+
+/* ── RAM MODAL ── */
+#ram-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.5); align-items: center; justify-content: center;
+}
+#ram-modal-overlay.open { display: flex; }
+#ram-modal {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px 24px; width: 520px; max-width: 95vw; max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+#ram-modal h3 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+#ram-modal .ram-sub { font-size: 11px; color: var(--text2); margin-bottom: 14px; }
+.ram-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ram-table th { text-align: left; padding: 5px 8px; font-size: 10px; font-weight: 700;
+  color: var(--text2); text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 2px solid var(--border); }
+.ram-table td { padding: 6px 8px; color: var(--text); border-bottom: 1px solid var(--border); }
+.ram-table tr:last-child td { border-bottom: none; }
+.ram-table tr:hover td { background: var(--bg3); }
+.ram-bar-cell { width: 90px; }
+.ram-bar-wrap { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.ram-bar-fill { height: 100%; border-radius: 3px; }
+#ram-modal-close {
+  float: right; background: var(--bg3); border: none; color: var(--text2);
+  cursor: pointer; border-radius: 50%; width: 24px; height: 24px;
+  font-size: 14px; display: flex; align-items: center; justify-content: center;
+}
+
+/* STATUS COLORS */
+.status-ok      { color: var(--ok); }
+.status-fail    { color: var(--fail); }
+.status-pending { color: var(--warn); }
+.status-neutral { color: var(--neutral); }
+</style>
+</head>
+<body>
+
+<!-- ── DISK ALERT BANNER ── -->
+<div id="disk-banner" style="display:none"></div>
+
+<!-- ── RAM MODAL ── -->
+<div id="ram-modal-overlay" onclick="if(event.target===this)closeRamModal()">
+  <div id="ram-modal">
+    <button id="ram-modal-close" onclick="closeRamModal()">×</button>
+    <h3>🧠 Processos por uso de RAM</h3>
+    <div class="ram-sub" id="ram-modal-sub"></div>
+    <table class="ram-table">
+      <thead><tr><th>Processo</th><th>Usuário</th><th>RAM</th><th class="ram-bar-cell"></th><th>CPU</th></tr></thead>
+      <tbody id="ram-modal-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── TOP BAR ── -->
+<div id="topbar">
+  <h1>⬡ Mapa do Servidor</h1>
+  <div class="sep"></div>
+  <button class="filter-btn active" onclick="setFilter('all',this)">Todos</button>
+  <button class="filter-btn" onclick="setFilter('pipeline',this)">Pipelines</button>
+  <button class="filter-btn" onclick="setFilter('database',this)">Bancos</button>
+  <button class="filter-btn" onclick="setFilter('external',this)">Fontes</button>
+  <button class="filter-btn" onclick="setFilter('runner',this)">Runners</button>
+  <button class="filter-btn" onclick="setFilter('service',this)">Serviços</button>
+  <button class="filter-btn" onclick="setFilter('monitor',this)">Monitores</button>
+  <div class="sep"></div>
+  <button class="view-btn active" id="btn-graph" onclick="setView('graph')">⬡ Grafo</button>
+  <button class="view-btn" id="btn-timeline" onclick="setView('timeline')">⏱ Timeline</button>
+  <button class="view-btn" id="btn-server" onclick="setView('server')">🖥 Servidor</button>
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Buscar nó..." oninput="doSearch(this.value)">
+    <div id="status-badge" title="Execute status_server.py e clique em Atualizar"></div>
+    <button id="refresh-btn" onclick="refreshStatus()" title="Requer status_server.py rodando">↻ Atualizar</button>
+    <button id="theme-btn" onclick="toggleTheme()" title="Tema claro/escuro">◑</button>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div id="main">
+
+  <!-- GRAPH -->
+  <div id="graph-container">
+    <div id="mynetwork"></div>
+    <div id="pills" class="panel-closed"></div>
+    <div id="legend">
+      <div><span class="dot" style="background:#6c8fff"></span> Pipeline</div>
+      <div><span class="dot" style="background:#34d399"></span> Banco</div>
+      <div><span class="dot" style="background:#f87171"></span> Fonte externa</div>
+      <div><span class="dot" style="background:#a78bfa"></span> Serviço</div>
+      <div><span class="dot" style="background:#fbbf24"></span> Monitor</div>
+      <div><span class="dot" style="background:#38bdf8"></span> Runner</div>
+    </div>
+  </div>
+
+  <!-- TIMELINE VIEW -->
+  <div id="timeline-view"></div>
+
+  <!-- SERVER VIEW -->
+  <div id="server-view"></div>
+
+  <!-- SIDE PANEL -->
+  <div id="panel" class="hidden">
+    <div id="panel-inner">
+      <div id="panel-content"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const GROUP_COLORS = {
+  pipeline: { border:'#6c8fff', background:'#1e3a5f', highlight:{border:'#93b4ff',background:'#274d80'} },
+  database: { border:'#34d399', background:'#1a3a2a', highlight:{border:'#6ee7b7',background:'#1e4d35'} },
+  external: { border:'#f87171', background:'#2d2020', highlight:{border:'#fca5a5',background:'#3d2828'} },
+  service:  { border:'#a78bfa', background:'#2a1f40', highlight:{border:'#c4b5fd',background:'#3b2a55'} },
+  monitor:  { border:'#fbbf24', background:'#2d2a10', highlight:{border:'#fde68a',background:'#3d3a18'} },
+  runner:   { border:'#38bdf8', background:'#0f2d40', highlight:{border:'#7dd3fc',background:'#163d55'} },
+};
+const GROUP_COLORS_LIGHT = {
+  pipeline: { border:'#3d5afe', background:'#e8edf8', highlight:{border:'#1a237e',background:'#c5cae9'} },
+  database: { border:'#00897b', background:'#e0f2f1', highlight:{border:'#004d40',background:'#b2dfdb'} },
+  external: { border:'#e53935', background:'#ffebee', highlight:{border:'#b71c1c',background:'#ffcdd2'} },
+  service:  { border:'#7b1fa2', background:'#f3e5f5', highlight:{border:'#4a148c',background:'#e1bee7'} },
+  monitor:  { border:'#f57f17', background:'#fff8e1', highlight:{border:'#e65100',background:'#ffe082'} },
+  runner:   { border:'#0277bd', background:'#e1f5fe', highlight:{border:'#01579b',background:'#b3e5fc'} },
+};
+const STATUS_BORDER = { ok:'#34d399', fail:'#f87171', pending:'#fbbf24' };
+const GROUP_FONT_COLOR = { pipeline:'#6c8fff', database:'#34d399', external:'#f87171', service:'#a78bfa', monitor:'#fbbf24', runner:'#38bdf8' };
+const GROUP_FONT_COLOR_LIGHT = { pipeline:'#1a237e', database:'#004d40', external:'#b71c1c', service:'#4a148c', monitor:'#bf360c', runner:'#01579b' };
+const BADGE_LABEL = { pipeline:'Pipeline', database:'Banco de Dados', external:'Fonte Externa', service:'Serviço', monitor:'Monitor', runner:'Runner CI/CD' };
+
+let network = null;
+let currentFilter = 'all';
+let visNodesDS = null, visEdgesDS = null;
+
+// ── VIS.JS ───────────────────────────────────────────────────────────────────
+
+const GROUP_ICON = {
+  pipeline: '⚙',
+  database: '🗄',
+  external: '🌐',
+  service:  '⚡',
+  monitor:  '📡',
+  runner:   '🚀',
+};
+
+const GROUP_SIZE = {
+  pipeline: { font: 13, margin: { top:14, right:18, bottom:14, left:18 }, widthConstraint: { minimum: 110 } },
+  database: { font: 12, margin: { top:12, right:16, bottom:12, left:16 }, widthConstraint: { minimum: 100 } },
+  external: { font: 12, margin: { top:10, right:14, bottom:10, left:14 }, widthConstraint: { minimum: 90  } },
+  monitor:  { font: 12, margin: { top:10, right:14, bottom:10, left:14 }, widthConstraint: { minimum: 90  } },
+  service:  { font: 11, margin: { top: 8, right:12, bottom: 8, left:12 }, widthConstraint: { minimum: 80  } },
+  runner:   { font: 11, margin: { top: 7, right:10, bottom: 7, left:10 }, widthConstraint: { minimum: 70  } },
+};
+
+function buildVisNode(n) {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const colMap  = isLight ? GROUP_COLORS_LIGHT : GROUP_COLORS;
+  const fntMap  = isLight ? GROUP_FONT_COLOR_LIGHT : GROUP_FONT_COLOR;
+  const gc = colMap[n.group] || colMap.pipeline;
+  const sb = STATUS_BORDER[n.status];
+  const gs = GROUP_SIZE[n.group] || GROUP_SIZE.service;
+  return {
+    id: n.id, label: (GROUP_ICON[n.group] ? GROUP_ICON[n.group] + '  ' : '') + n.label, group: n.group, shape: 'box',
+    color: { border: sb || gc.border, background: gc.background, highlight: gc.highlight },
+    font: { color: fntMap[n.group] || (isLight ? '#1a1d3a' : '#e2e4f0'), size: gs.font, bold: n.group === 'pipeline' || n.group === 'database' },
+    margin: gs.margin,
+    widthConstraint: gs.widthConstraint,
+    borderWidth: sb ? 2 : 1,
+    shadow: { enabled: true, size: n.group === 'pipeline' ? 10 : 5, x: 2, y: 2, color: (gc.border + '55') },
+  };
+}
+
+function buildVisEdge(e) {
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const edgeColor = e.dashes ? '#4a5080' : '#6c8fff';
+  const labelColor = e.dashes ? '#7a85b8' : '#93b4ff';
+  const labelBg = isDark ? '#1a1d2e' : '#ffffff';
+  return {
+    id: e.from + '__' + e.to,
+    from: e.from, to: e.to, label: e.label || '',
+    arrows: 'to', dashes: !!e.dashes,
+    color: { color: edgeColor, opacity: .75 },
+    font: { color: labelColor, size: 10, align: 'middle', background: labelBg, strokeWidth: 0 },
+    smooth: { type: 'curvedCW', roundness: .15 },
+  };
+}
+
+function rebuildNetwork(filterGroup) {
+  const nodeIds = new Set();
+  const visNodes = new vis.DataSet();
+  const visEdges = new vis.DataSet();
+
+  NODES.forEach(n => {
+    if (filterGroup === 'all' || n.group === filterGroup) {
+      visNodes.add(buildVisNode(n));
+      nodeIds.add(n.id);
+    }
+  });
+  EDGES.forEach(e => {
+    if (nodeIds.has(e.from) && nodeIds.has(e.to)) visEdges.add(buildVisEdge(e));
+  });
+
+  const container = document.getElementById('mynetwork');
+  const opts = {
+    physics: {
+      solver: 'forceAtlas2Based',
+      forceAtlas2Based: { gravitationalConstant: -80, springLength: 180, springConstant: .05, damping: .7 },
+      stabilization: { iterations: 200 },
+    },
+    interaction: { hover: true, tooltipDelay: 100 },
+    layout: { improvedLayout: true },
+  };
+
+  visNodesDS = visNodes;
+  visEdgesDS = visEdges;
+
+  if (network) { network.destroy(); network = null; }
+  network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, opts);
+  network.once('stabilizationIterationsDone', () => network.setOptions({ physics: { enabled: false } }));
+  network.on('click', p => {
+    if (p.nodes.length) { highlightConnected(p.nodes[0]); showPanel(p.nodes[0]); }
+    else { resetHighlight(); closePanel(); }
+  });
+}
+
+// ── HIGHLIGHT CONNECTED ──────────────────────────────────────────────────────
+
+function highlightConnected(nodeId) {
+  if (!visNodesDS || !visEdgesDS) return;
+
+  // Collect directly connected nodes and edges
+  const connected = new Set([nodeId]);
+  const activeEdgeIds = new Set();
+
+  EDGES.forEach(e => {
+    if (e.from === nodeId || e.to === nodeId) {
+      connected.add(e.from);
+      connected.add(e.to);
+      activeEdgeIds.add(e.from + '__' + e.to);
+    }
+  });
+
+  // Update nodes
+  const nodeUpdates = [];
+  visNodesDS.getIds().forEach(id => {
+    const n = NODES.find(n => n.id === id);
+    if (!n) return;
+    if (id === nodeId) {
+      // Clicked node — brighter border
+      const gc = GROUP_COLORS[n.group] || GROUP_COLORS.pipeline;
+      nodeUpdates.push({ id, color: { border: gc.border, background: gc.background, highlight: gc.highlight },
+        font: { color: GROUP_FONT_COLOR[n.group] || '#e2e4f0', size: 12 }, borderWidth: 3, shadow: { enabled: true, size: 12, x: 0, y: 0, color: gc.border + '88' } });
+    } else if (connected.has(id)) {
+      // Neighbor — normal colors
+      nodeUpdates.push(buildVisNode(n));
+    } else {
+      // Dimmed
+      const _lt = document.documentElement.getAttribute('data-theme') === 'light';
+      nodeUpdates.push({ id, color: { border: _lt ? '#d0d4e8' : '#22243a', background: _lt ? '#f0f2fb' : '#0d0e18' },
+        font: { color: _lt ? '#c0c4d8' : '#2a2c40', size: 12 }, borderWidth: 1, shadow: { enabled: false } });
+    }
+  });
+  visNodesDS.update(nodeUpdates);
+
+  // Update edges
+  const edgeUpdates = [];
+  visEdgesDS.getIds().forEach(eid => {
+    const e = EDGES.find(e => (e.from + '__' + e.to) === eid);
+    if (!e) return;
+    if (activeEdgeIds.has(eid)) {
+      edgeUpdates.push(buildVisEdge(e));
+    } else {
+      const _le = document.documentElement.getAttribute('data-theme') === 'light';
+      edgeUpdates.push({ id: eid, color: { color: _le ? '#d0d4e8' : '#151620', opacity: .15 }, font: { color: _le ? '#d0d4e8' : '#0d0e18' } });
+    }
+  });
+  visEdgesDS.update(edgeUpdates);
+}
+
+function resetHighlight() {
+  if (!visNodesDS || !visEdgesDS) return;
+  const nUp = [];
+  visNodesDS.getIds().forEach(id => { const n = NODES.find(n => n.id === id); if (n) nUp.push(buildVisNode(n)); });
+  visNodesDS.update(nUp);
+  const eUp = [];
+  visEdgesDS.getIds().forEach(eid => { const e = EDGES.find(e => (e.from + '__' + e.to) === eid); if (e) eUp.push(buildVisEdge(e)); });
+  visEdgesDS.update(eUp);
+}
+
+// ── FILTER & SEARCH ──────────────────────────────────────────────────────────
+
+function setFilter(g, btn) {
+  currentFilter = g;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  rebuildNetwork(g);
+  closePanel();
+}
+
+function doSearch(q) {
+  if (!q.trim()) { if (network) network.fit(); return; }
+  const lq = q.toLowerCase();
+  const match = NODES.find(n =>
+    n.id.toLowerCase().includes(lq) ||
+    n.label.toLowerCase().includes(lq) ||
+    (n.description || '').toLowerCase().includes(lq)
+  );
+  if (match) focusNode(match.id);
+}
+
+function focusNode(id) {
+  const graphCt = document.getElementById('graph-container');
+  if (graphCt.classList.contains('tl-hidden')) setViewDirect('graph');
+  if (currentFilter !== 'all' && !NODES.find(n => n.id === id && n.group === currentFilter)) {
+    setFilter('all', document.querySelector('.filter-btn'));
+  }
+  setTimeout(() => {
+    if (network) {
+      network.focus(id, { scale: 1.4, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+      network.selectNodes([id]);
+    }
+    showPanel(id);
+  }, 50);
+}
+
+// ── SIDE PANEL ───────────────────────────────────────────────────────────────
+
+function closePanel() {
+  document.getElementById('panel').classList.add('hidden');
+  document.getElementById('pills').classList.add('panel-closed');
+  resetHighlight();
+}
+
+function showPanel(id) {
+  const node = NODES.find(n => n.id === id);
+  if (!node) return;
+  document.getElementById('panel').classList.remove('hidden');
+  document.getElementById('pills').classList.remove('panel-closed');
+
+  const feedsMe = EDGES.filter(e => e.to === id);
+  const iFeed   = EDGES.filter(e => e.from === id);
+  const statusDot = { ok:'🟢', fail:'🔴', pending:'🟡', neutral:'⚫' };
+
+  let h = `<div class="panel-header">
+    <button id="panel-close" onclick="closePanel()">×</button>
+    <div class="panel-title">${node.label.replace(/\n/g,' ')}</div>
+    <div><span class="panel-badge badge-${node.group}">${BADGE_LABEL[node.group]||node.group}</span></div>
+    ${node.status && node.status !== 'neutral' ? `<div style="margin-top:6px;font-size:12px">${statusDot[node.status]||'⚫'} Status: <span class="status-${node.status}">${node.status.toUpperCase()}</span></div>` : ''}
+  </div>`;
+
+  if (node.description) h += sect('O que faz', `<p>${node.description}</p>`);
+  if (node.cron)        h += sect('Agendamento', kv('Cron', node.cron) + (node.duration_min ? kv('Duração estimada', `~${node.duration_min} min`) : ''));
+
+  // Última execução real (de status.js)
+  if (node._last_run || node._duration || node._inserts || node._error || (node._history && node._history.length)) {
+    const stIcon = { ok:'✅', fail:'❌', pending:'⚠️', neutral:'—' }[node.status] || '—';
+    const stColor = { ok:'var(--ok)', fail:'var(--fail)', pending:'var(--warn)', neutral:'var(--text2)' }[node.status] || 'var(--text2)';
+    let execHtml = kv('Status hoje', `<span style="color:${stColor};font-weight:600">${stIcon} ${(node.status||'').toUpperCase()}</span>`);
+    if (node._last_run) execHtml += kv('Último run', node._last_run + ' BRT');
+    if (node._duration) execHtml += kv('Duração real', node._duration);
+    if (node._inserts)  execHtml += kv('Registros', Number(node._inserts).toLocaleString('pt-BR'));
+    if (node._error)    execHtml += kv('Detalhe', `<span style="color:var(--warn)">${node._error}</span>`);
+    if (node._history && node._history.length) {
+      const y = node._history[node._history.length - 1];
+      const col = {ok:'var(--ok)',fail:'var(--fail)',neutral:'var(--neutral)'}[y.status]||'var(--neutral)';
+      const lbl = {ok:'✅ OK',fail:'❌ Falhou',neutral:'— Sem dados'}[y.status]||'—';
+      execHtml += kv('Ontem', `<span style="color:${col}">${lbl}</span>`);
+    }
+    h += sect('Última Execução', execHtml);
+  }
+  if (node._last_log && node._last_log.length && (node.status === 'fail' || node.status === 'pending')) {
+    const logLines = node._last_log.map(l => l.replace(/</g,'&lt;').replace(/>/g,'&gt;')).join('\n');
+    h += sect('Log (últimas linhas)', `<pre style="font-size:10px;line-height:1.5;overflow-x:auto;max-height:220px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;white-space:pre-wrap;word-break:break-all">${logLines}</pre>`);
+  }
+
+  if (node.path)        h += sect('Caminho', `<div style="font-family:monospace;font-size:11px">${node.path}</div>`);
+  if (node.info)        h += sect('Info Técnica', `<div style="white-space:pre-wrap;font-family:monospace;font-size:11px">${node.info}</div>`);
+
+  if (node.source_db || node.target_db)
+    h += sect('Fluxo de Dados',
+      (node.source_db ? kv('Origem', node.source_db) : '') +
+      (node.target_db ? kv('Destino', node.target_db) : ''));
+
+  if (node.schemas) h += sect('Schemas', node.schemas.map(s => `<div style="font-family:monospace;font-size:11px;margin-bottom:3px">${s}</div>`).join(''));
+
+  if (node.key_tables && node.key_tables.length) {
+    h += sect('Tabelas Principais', node.key_tables.map(t =>
+      `<div class="key-table-block">
+        <div class="key-table-name">${t.table}</div>
+        ${t.cols ? `<div class="table-cols">${t.cols.map(c => `<span class="col-tag">${c}</span>`).join('')}</div>` : ''}
+      </div>`).join(''));
+  }
+
+  if (node.alimentado_por) h += sect('Alimentado por', node.alimentado_por.map(a => `<span class="tag">${a}</span>`).join(''));
+
+  if (node.tables_read && node.tables_read.length)
+    h += sect('Tabelas Lidas (Origem)', node.tables_read.map(t => renderTable(t, false)).join(''));
+
+  if (node.tables_written && node.tables_written.length)
+    h += sect('Tabelas Escritas (Destino)', node.tables_written.map(t => renderTable(t, true)).join(''));
+
+  if (node.scripts && node.scripts.length)
+    h += sect('Scripts', node.scripts.map(s => `<div class="proc-item">${s}</div>`).join(''));
+
+  if (node.script_details && node.script_details.length)
+    h += sect('Lógica Interna dos Scripts', node.script_details.map(sd =>
+      `<div class="script-block">
+        <div class="script-name">📄 ${sd.name}</div>
+        <ul class="step-list">${sd.steps.map(s => `<li>${s}</li>`).join('')}</ul>
+      </div>`).join(''));
+
+  if (node.procedures && node.procedures.length)
+    h += sect('Stored Procedures', node.procedures.map(p => `<div class="proc-item">${p}</div>`).join(''));
+
+  if (node.shoppings && node.shoppings.length)
+    h += sect('Shoppings', node.shoppings.map(s => `<span class="tag">${s}</span>`).join(''));
+
+  // Conexões / vizinhos
+  if (feedsMe.length || iFeed.length) {
+    let connHtml = '';
+    if (feedsMe.length) {
+      connHtml += `<div style="font-size:11px;color:var(--text2);margin-bottom:6px">Quem alimenta este nó:</div>`;
+      feedsMe.forEach(e => {
+        const src = NODES.find(n => n.id === e.from);
+        if (!src) return;
+        connHtml += `<div class="neighbor-link" onclick="focusNode('${src.id}')">
+          <span class="neighbor-dir dir-in">IN</span>
+          <span class="neighbor-label">${src.label.replace(/\n/g,' ')}</span>
+          ${e.label ? `<span class="neighbor-edge-label">${e.label}</span>` : ''}
+        </div>`;
+      });
+    }
+    if (iFeed.length) {
+      connHtml += `<div style="font-size:11px;color:var(--text2);margin:${feedsMe.length?'10px':0} 0 6px">Este nó alimenta:</div>`;
+      iFeed.forEach(e => {
+        const dst = NODES.find(n => n.id === e.to);
+        if (!dst) return;
+        connHtml += `<div class="neighbor-link" onclick="focusNode('${dst.id}')">
+          <span class="neighbor-dir dir-out">OUT</span>
+          <span class="neighbor-label">${dst.label.replace(/\n/g,' ')}</span>
+          ${e.label ? `<span class="neighbor-edge-label">${e.label}</span>` : ''}
+        </div>`;
+      });
+    }
+    h += sect('Conexões', connHtml);
+  }
+
+  if (node.notes) h += sect('Observações', `<p>${node.notes}</p>`);
+
+  document.getElementById('panel-content').innerHTML = h;
+  document.getElementById('panel-inner').scrollTop = 0;
+}
+
+function sect(title, body) {
+  return `<div class="section"><div class="section-title">${title}</div><div class="section-body">${body}</div></div>`;
+}
+function kv(k, v) { return `<div class="kv"><span class="kv-key">${k}</span><span class="kv-val">${v}</span></div>`; }
+
+function renderTable(t, isWrite) {
+  const keys = (t.key || '').split(',').map(s => s.trim()).filter(Boolean);
+  const borderColor = isWrite ? 'var(--accent)44' : 'var(--border)';
+  const nameColor = isWrite ? 'color:var(--accent)' : '';
+  return `<div class="table-block" style="border-color:${borderColor}">
+    <div class="table-name" style="${nameColor}">${t.table}</div>
+    <div class="table-meta">
+      ${t.key ? `<span style="color:var(--warn)">⚿ ${t.key}</span> &nbsp;` : ''}
+      ${t.load ? `<span>↻ ${t.load}</span>` : ''}
+    </div>
+    ${t.cols && t.cols.length ? `<div class="table-cols">${t.cols.map(c => {
+      const isKey = keys.some(k => k === c);
+      return `<span class="col-tag${isKey?' key':''}">${c}</span>`;
+    }).join('')}</div>` : ''}
+  </div>`;
+}
+
+// ── TIMELINE VIEW ────────────────────────────────────────────────────────────
+
+const TL_S = 2.5, TL_E = 21.5; // BRT (UTC-3)
+
+function pct(h) { return ((h - TL_S) / (TL_E - TL_S) * 100).toFixed(3) + '%'; }
+
+function buildTimeline() {
+  const timed = NODES
+    .filter(n => n.cron_hour !== null && n.cron_hour !== undefined)
+    .sort((a, b) => a.cron_hour - b.cron_hour);
+
+  const hours = [];
+  for (let h = 3; h <= 21; h++) hours.push(h);
+
+  const axisHtml = hours.map(h =>
+    `<div style="position:absolute;left:${pct(h)};transform:translateX(-50%);font-size:10px;color:var(--text2)">${h===24?'00':String(h).padStart(2,'0')}:00</div>`
+  ).join('');
+
+  const gridHtml = hours.map(h =>
+    `<div class="tl-grid-line" style="left:${pct(h)}"></div>`
+  ).join('');
+
+  const now = new Date();
+  const nowH = now.getHours() + now.getMinutes() / 60;
+  let nowHtml = '';
+  if (nowH >= TL_S && nowH <= TL_E) {
+    const hStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    nowHtml = `<div class="tl-now" style="left:${pct(nowH)}"><span class="tl-now-lbl">${hStr}</span></div>`;
+  }
+
+  const rowsHtml = timed.map(n => {
+    const sh = n.cron_hour;
+    const eh = sh + (n.duration_min || 20) / 60;
+    const l = pct(sh);
+    const w = ((Math.min(eh, TL_E) - sh) / (TL_E - TL_S) * 100).toFixed(3) + '%';
+    const hStr = `${String(Math.floor(sh)).padStart(2,'0')}:${String(Math.round((sh % 1) * 60)).padStart(2,'0')}`;
+    const statusStyle = {
+      ok:      'background:#1a3a2a;color:#34d399;border:1px solid #34d39966',
+      fail:    'background:#3a1010;color:#f87171;border:1px solid #f8717166',
+      pending: 'background:#2d2000;color:#fbbf24;border:1px solid #fbbf2466',
+      neutral: n.group === 'monitor'
+               ? 'background:#2d2a10;color:#fbbf24;border:1px solid #fbbf2444'
+               : 'background:#1e3a5f;color:#6c8fff;border:1px solid #6c8fff44',
+    }[n.status || 'neutral'];
+    const statusIcon = { ok:'✅ ', fail:'❌ ', pending:'⚠️ ' }[n.status] || '';
+    return `<div class="tl-row">
+      <div class="tl-row-label">${n.label.replace(/\n/g,' ')}</div>
+      <div class="tl-track">
+        ${gridHtml}
+        <div class="tl-bar" style="left:${l};width:${w};${statusStyle}"
+             title="${n.cron}" onclick="switchToGraphAndFocus('${n.id}')">
+          ${statusIcon}${hStr}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Table rows
+  const tableRows = timed.map(n => {
+    const icon = GROUP_ICON[n.group] || '';
+    const hStr = `${String(Math.floor(n.cron_hour)).padStart(2,'0')}:${String(Math.round((n.cron_hour % 1) * 60)).padStart(2,'0')}`;
+    const dur = n.duration_min ? `~${n.duration_min} min` : '—';
+    const dest = n.target_db || '—';
+    const src  = n.source_db ? n.source_db.split('—')[0].trim().split('(')[0].trim() : '—';
+    const scripts = n.scripts ? n.scripts.slice(0, 2).map(s => s.split('—')[0].trim().split('/').pop()).join(', ') + (n.scripts.length > 2 ? ` +${n.scripts.length - 2}` : '') : '—';
+    const freq = n.cron && n.cron.includes('mensal') ? 'Mensal' : 'Diário';
+    const rowColor = n.group === 'monitor' ? 'var(--warn)' : 'var(--accent)';
+    return `<tr onclick="switchToGraphAndFocus('${n.id}')" style="cursor:pointer">
+      <td><span style="color:${rowColor};font-weight:600">${icon} ${n.label.replace(/\n/g,' ')}</span></td>
+      <td style="font-family:monospace;color:var(--ok)">${hStr} BRT</td>
+      <td>${dur}</td>
+      <td style="font-size:11px;color:var(--text2)">${freq}</td>
+      <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${src}">${src}</td>
+      <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${dest}">${dest}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${n.scripts ? n.scripts.join(', ') : ''}">${scripts}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('timeline-view').innerHTML = `
+    <div class="tl-title">Timeline do Dia — Ordem de Execução dos Pipelines</div>
+    <div class="tl-outer">
+      <div class="tl-header">
+        <div class="tl-label-col"></div>
+        <div class="tl-axis">${axisHtml}</div>
+      </div>
+      <div class="tl-rows-wrap" style="position:relative">
+        ${nowHtml}
+        ${rowsHtml}
+      </div>
+    </div>
+    <div class="tl-legend">
+      <span><span class="tl-swatch" style="background:#1a3a2a;border:1px solid #34d399"></span> OK</span>
+      <span><span class="tl-swatch" style="background:#3a1010;border:1px solid #f87171"></span> Falhou</span>
+      <span><span class="tl-swatch" style="background:#2d2000;border:1px solid #fbbf24"></span> Aviso</span>
+      <span><span class="tl-swatch" style="background:#1e3a5f;border:1px solid #6c8fff"></span> Sem status</span>
+      <span style="color:var(--fail)">▌ linha = agora</span>
+      <span style="color:var(--text2)">(clique na barra ou linha para ver detalhes)</span>
+    </div>
+
+    <div class="tl-table-wrap">
+      <div class="tl-table-title">Detalhes por Execução</div>
+      <table class="tl-table">
+        <thead>
+          <tr>
+            <th>Pipeline / Monitor</th>
+            <th>Horário BRT</th>
+            <th>Duração</th>
+            <th>Frequência</th>
+            <th>Origem</th>
+            <th>Destino</th>
+            <th>Scripts principais</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── SERVER DASHBOARD ────────────────────────────────────────────────────────
+
+function buildServerView() {
+  const sv = (typeof SERVER_STATUS !== 'undefined') ? SERVER_STATUS : null;
+  const disk = (typeof DISK_STATUS !== 'undefined') ? DISK_STATUS : [];
+  const upd = (typeof STATUS_UPDATED_AT !== 'undefined') ? STATUS_UPDATED_AT : '—';
+  const el = document.getElementById('server-view');
+
+  if (!sv || Object.keys(sv).length === 0) {
+    el.innerHTML = `<div style="color:var(--text2);padding:40px;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">🖥</div>
+      <div>Dados do servidor não carregados.</div>
+      <div style="margin-top:8px;font-size:12px">Clique em <strong>↻ Atualizar</strong> com o status_server.py rodando.</div>
+    </div>`;
+    return;
+  }
+
+  // Cores por % uso
+  const barColor = pct => pct >= 85 ? '#f87171' : pct >= 70 ? '#fbbf24' : '#34d399';
+  const cardClass = pct => pct >= 85 ? 'crit' : pct >= 70 ? 'warn' : '';
+
+  // Cards métricas
+  const cpuColor  = barColor(sv.cpu_pct);
+  const ramColor  = barColor(sv.ram_pct);
+
+  const cards = `
+    <div class="sv-card ${cardClass(sv.cpu_pct)}">
+      <div class="sv-card-label">CPU</div>
+      <div class="sv-card-value" style="color:${cpuColor}">${sv.cpu_pct}<span style="font-size:14px">%</span></div>
+      <div class="sv-bar-wrap"><div class="sv-bar-fill" style="width:${sv.cpu_pct}%;background:${cpuColor}"></div></div>
+      <div class="sv-card-sub">Load: ${sv.load1} · ${sv.load5} · ${sv.load15}</div>
+    </div>
+    <div class="sv-card ${cardClass(sv.ram_pct)}">
+      <div class="sv-card-label">RAM ${sv.ram_pct >= 85 ? '🔴' : sv.ram_pct >= 70 ? '⚠️' : ''}</div>
+      <div class="sv-card-value" style="color:${ramColor}">${sv.ram_pct}<span style="font-size:14px">%</span></div>
+      <div class="sv-bar-wrap"><div class="sv-bar-fill" style="width:${sv.ram_pct}%;background:${ramColor}"></div></div>
+      <div class="sv-card-sub">${sv.ram_used_gb} GB / ${sv.ram_total_gb} GB</div>
+    </div>
+    <div class="sv-card">
+      <div class="sv-card-label">Uptime</div>
+      <div class="sv-card-value" style="font-size:18px;padding-top:4px">${sv.uptime}</div>
+      <div class="sv-card-sub">${sv.proc_count} processos</div>
+    </div>
+    <div class="sv-card">
+      <div class="sv-card-label">Load Average</div>
+      <div class="sv-card-value" style="font-size:22px;padding-top:4px">${sv.load1}</div>
+      <div class="sv-card-sub">5m: ${sv.load5} · 15m: ${sv.load15}</div>
+    </div>`;
+
+  // Disco
+  const diskRows = disk.map(d => {
+    const color = barColor(d.pct);
+    const icon = d.level === 'critical' ? ' 🔴' : d.level === 'warn' ? ' ⚠️' : '';
+    return `<div class="sv-disk-row">
+      <div class="sv-disk-mount">${d.mount}${icon}</div>
+      <div class="sv-disk-bar"><div class="sv-disk-bar-fill" style="width:${d.pct}%;background:${color}"></div></div>
+      <div class="sv-disk-info">${d.pct}% &nbsp;·&nbsp; ${d.used} / ${d.size}</div>
+    </div>`;
+  }).join('');
+
+  // Serviços
+  const svcItems = (sv.services || []).map(s => `
+    <div class="sv-svc-item">
+      <span class="sv-svc-dot" style="background:${s.running ? '#34d399' : '#f87171'}"></span>
+      <span class="sv-svc-label">${s.label}</span>
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div class="sv-hostname">🖥 ${sv.hostname}</div>
+    <div class="sv-meta">${sv.os} &nbsp;·&nbsp; Kernel ${sv.kernel} &nbsp;·&nbsp; Atualizado: ${upd}</div>
+
+    <div class="sv-section-title">Métricas do Sistema</div>
+    <div class="sv-grid">${cards}</div>
+
+    <div class="sv-section-title">Disco</div>
+    ${diskRows || '<div style="color:var(--text2);font-size:12px">Sem dados de disco</div>'}
+
+    <div style="margin-top:20px" class="sv-section-title">Serviços</div>
+    <div class="sv-svc-grid">${svcItems || '<div style="color:var(--text2);font-size:12px">Sem dados</div>'}</div>`;
+}
+
+function switchToGraphAndFocus(id) {
+  setViewDirect('graph');
+  setTimeout(() => focusNode(id), 150);
+}
+
+// ── VIEW TOGGLE ──────────────────────────────────────────────────────────────
+
+function setView(v) { setViewDirect(v); }
+
+function setViewDirect(v) {
+  const gc = document.getElementById('graph-container');
+  const tl = document.getElementById('timeline-view');
+  const sv = document.getElementById('server-view');
+  const bg = document.getElementById('btn-graph');
+  const bt = document.getElementById('btn-timeline');
+  const bs = document.getElementById('btn-server');
+
+  // Reset all
+  gc.classList.remove('tl-hidden', 'sv-hidden');
+  tl.classList.remove('active');
+  sv.classList.remove('active');
+  [bg, bt, bs].forEach(b => b && b.classList.remove('active'));
+
+  if (v === 'timeline') {
+    gc.classList.add('tl-hidden');
+    tl.classList.add('active');
+    bt.classList.add('active');
+    buildTimeline();
+    closePanel();
+  } else if (v === 'server') {
+    gc.classList.add('sv-hidden');
+    sv.classList.add('active');
+    bs.classList.add('active');
+    buildServerView();
+    closePanel();
+  } else {
+    bg.classList.add('active');
+    if (!network) rebuildNetwork('all');
+  }
+}
+
+// ── PILLS ────────────────────────────────────────────────────────────────────
+
+function buildPills() {
+  const dotColor = { ok:'var(--ok)', fail:'var(--fail)', pending:'var(--warn)', neutral:'var(--neutral)' };
+  const items = NODES.filter(n => n.group === 'pipeline' || n.group === 'monitor');
+  document.getElementById('pills').innerHTML = items.map(n =>
+    `<div class="pill" onclick="focusNode('${n.id}')">
+      <span class="pill-dot" style="background:${dotColor[n.status]||dotColor.neutral}"></span>
+      ${n.label.replace(/\n/g,' ')}
+    </div>`).join('');
+}
+
+// ── THEME ────────────────────────────────────────────────────────────────────
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+
+// ── REFRESH STATUS (botão) ───────────────────────────────────────────────────
+
+async function refreshStatus() {
+  const btn = document.getElementById('refresh-btn');
+  const badge = document.getElementById('status-badge');
+  btn.disabled = true;
+  btn.textContent = '↻ Buscando…';
+  badge.textContent = '⏳ conectando…';
+  try {
+    const resp = await fetch('http://localhost:5678/refresh', { signal: AbortSignal.timeout(45000) });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const result = await resp.json();
+    if (!result.ok) throw new Error(result.error || 'Erro desconhecido');
+
+    // Aplica em memória
+    Object.entries(result.pipelines).forEach(([id, p]) => {
+      const node = NODES.find(n => n.id === id);
+      if (!node) return;
+      node.status    = p.status;
+      node._last_run = p.last_run;
+      node._duration = p.duration;
+      node._inserts  = p.inserts;
+      node._error    = p.error;
+      node._history  = p.history  || [];
+      node._last_log = p.last_log || [];
+    });
+
+    // Reconstrói grafo e pills com os novos status
+    rebuildNetwork(currentFilter);
+    buildPills();
+    // Atualiza SERVER_STATUS em memória
+    if (result.server) { window.SERVER_STATUS = result.server; }
+    if (result.disk)   { window.DISK_STATUS   = result.disk;   }
+    showDiskBanner(result.disk || []);
+    updateBadge();
+    if (document.getElementById('server-view').classList.contains('active')) buildServerView();
+    btn.textContent = '↻ Atualizar';
+    btn.disabled = false;
+  } catch (err) {
+    btn.textContent = '↻ Atualizar';
+    btn.disabled = false;
+    if (err.message.includes('fetch') || err.message.includes('Failed') || err.message.includes('NetworkError')) {
+      badge.textContent = '⚠️ status_server.py não está rodando';
+      badge.style.color = 'var(--warn)';
+    } else {
+      badge.textContent = '❌ ' + err.message;
+      badge.style.color = 'var(--fail)';
+    }
+  }
+}
+
+// ── APPLY STATUS FROM status.js ──────────────────────────────────────────────
+
+function applyStatuses() {
+  if (typeof PIPELINE_STATUS === 'undefined') return;
+  NODES.forEach(n => {
+    const s = PIPELINE_STATUS[n.id];
+    if (!s) return;
+    n.status     = s.status;
+    n._last_run  = s.last_run;
+    n._duration  = s.duration;
+    n._inserts   = s.inserts;
+    n._error     = s.error;
+    n._history   = s.history  || [];
+    n._last_log  = s.last_log || [];
+  });
+  showDiskBanner(typeof DISK_STATUS !== 'undefined' ? DISK_STATUS : []);
+  updateBadge();
+}
+
+// ── DISK BANNER ─────────────────────────────────────────────────────────────
+
+function showDiskBanner(diskArr) {
+  const banner = document.getElementById('disk-banner');
+  const sv = (typeof SERVER_STATUS !== 'undefined') ? SERVER_STATUS : null;
+  const ramPct   = sv ? sv.ram_pct : 0;
+  const ramLevel = ramPct >= 85 ? 'critical' : ramPct >= 70 ? 'warn' : 'ok';
+
+  if (!diskArr || !diskArr.length) { banner.style.display = 'none'; return; }
+
+  const hasCritical = diskArr.some(d => d.level === 'critical') || ramLevel === 'critical';
+  const hasWarn     = diskArr.some(d => d.level === 'warn')     || ramLevel === 'warn';
+  if (!hasCritical && !hasWarn) { banner.style.display = 'none'; return; }
+
+  banner.className = hasCritical ? 'has-critical' : 'has-warn';
+  const icon = hasCritical ? '🔴 ALERTA' : '⚠️ Atenção';
+
+  const diskItems = diskArr.map(d => {
+    const barColor = d.level === 'critical' ? '#f87171' : d.level === 'warn' ? '#fbbf24' : '#34d399';
+    return `<span class="disk-item">
+      <strong>${d.mount}</strong>
+      <span class="disk-bar-wrap"><span class="disk-bar-fill" style="width:${d.pct}%;background:${barColor}"></span></span>
+      <span>${d.pct}% (${d.used}/${d.size})</span>
+    </span>`;
+  });
+
+  const ramItems = [];
+  if (ramLevel !== 'ok' && sv) {
+    const ramColor = ramLevel === 'critical' ? '#f87171' : '#fbbf24';
+    ramItems.push(`<span class="disk-item clickable" onclick="openRamModal()" title="Clique para ver processos">
+      <strong>RAM</strong>
+      <span class="disk-bar-wrap"><span class="disk-bar-fill" style="width:${ramPct}%;background:${ramColor}"></span></span>
+      <span>${ramPct}% (${sv.ram_used_gb}/${sv.ram_total_gb} GB) 🔍</span>
+    </span>`);
+  }
+
+  banner.innerHTML = `<span style="font-weight:700">${icon}</span>${[...ramItems, ...diskItems].join('')}`;
+  banner.style.display = 'flex';
+}
+
+// ── RAM MODAL ────────────────────────────────────────────────────────────────
+
+function openRamModal() {
+  const sv = (typeof SERVER_STATUS !== 'undefined') ? SERVER_STATUS : null;
+  if (!sv) return;
+  const procs = sv.top_mem || [];
+  document.getElementById('ram-modal-sub').textContent =
+    `Total: ${sv.ram_used_gb} GB / ${sv.ram_total_gb} GB (${sv.ram_pct}% em uso real)`;
+  const barColor = p => p >= 20 ? '#f87171' : p >= 5 ? '#fbbf24' : '#34d399';
+  document.getElementById('ram-modal-body').innerHTML = procs.map(p => {
+    const pct = parseFloat(p.mem);
+    const cmd = p.cmd.replace(/</g,'&lt;').split('/').pop().split(' ')[0];
+    const full = p.cmd.replace(/</g,'&lt;');
+    return `<tr title="${full}">
+      <td style="font-family:monospace;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cmd}</td>
+      <td style="color:var(--text2)">${p.user}</td>
+      <td style="font-weight:600;color:${barColor(pct)}">${p.rss_mb} MB</td>
+      <td class="ram-bar-cell"><div class="ram-bar-wrap"><div class="ram-bar-fill" style="width:${Math.min(pct*1.5,100)}%;background:${barColor(pct)}"></div></div></td>
+      <td style="color:var(--text2)">${p.cpu}%</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('ram-modal-overlay').classList.add('open');
+}
+
+function closeRamModal() {
+  document.getElementById('ram-modal-overlay').classList.remove('open');
+}
+
+function updateBadge() {
+  const badge = document.getElementById('status-badge');
+  if (!badge) return;
+  badge.style.color = '';
+  const tracked = NODES.filter(n => n.status && n.status !== 'neutral' && n.group === 'pipeline' || n.group === 'monitor');
+  const ok   = NODES.filter(n => n.status === 'ok').length;
+  const fail = NODES.filter(n => n.status === 'fail').length;
+  const pend = NODES.filter(n => n.status === 'pending').length;
+  const dot  = fail > 0 ? '🔴' : pend > 0 ? '🟡' : '🟢';
+  const upd  = typeof STATUS_UPDATED_AT !== 'undefined' ? STATUS_UPDATED_AT : '—';
+  badge.textContent = `${dot} ${ok} ok${fail > 0 ? ' · ' + fail + ' erro' : ''}${pend > 0 ? ' · ' + pend + ' aviso' : ''} · ${upd}`;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+
+(function init() {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  applyStatuses();
+  rebuildNetwork('all');
+  buildPills();
+})();
+</script>
+</body>
+</html>
