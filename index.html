@@ -304,9 +304,50 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .status-fail    { color: var(--fail); }
 .status-pending { color: var(--warn); }
 .status-neutral { color: var(--neutral); }
+
+/* ── LOGIN ── */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(15,17,23,.97); display: none;
+  align-items: center; justify-content: center;
+}
+#login-overlay.open { display: flex; }
+#login-box {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 40px 44px; width: 360px; text-align: center;
+  box-shadow: 0 8px 48px rgba(0,0,0,.6);
+}
+#login-logo { font-size: 36px; margin-bottom: 10px; }
+#login-box h2 { font-size: 18px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+#login-box p  { font-size: 12px; color: var(--text2); margin-bottom: 28px; }
+#login-pwd {
+  width: 100%; padding: 11px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--text); font-size: 14px; margin-bottom: 12px; display: block;
+}
+#login-pwd:focus { outline: none; border-color: var(--accent); }
+#login-btn {
+  width: 100%; padding: 11px; border-radius: 8px; border: none;
+  background: var(--accent); color: #fff; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: opacity .15s;
+}
+#login-btn:hover { opacity: .85; }
+#login-err { color: var(--fail); font-size: 12px; margin-top: 10px; min-height: 16px; }
 </style>
 </head>
 <body>
+
+<!-- ── LOGIN ── -->
+<div id="login-overlay">
+  <div id="login-box">
+    <div id="login-logo">⬡</div>
+    <h2>Mapa do Servidor</h2>
+    <p>Argoplan Inteligência</p>
+    <input type="password" id="login-pwd" placeholder="Senha de acesso" onkeydown="if(event.key==='Enter')doLogin()">
+    <button id="login-btn" onclick="doLogin()">Entrar</button>
+    <div id="login-err"></div>
+  </div>
+</div>
 
 <!-- ── DISK ALERT BANNER ── -->
 <div id="disk-banner" style="display:none"></div>
@@ -344,6 +385,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <div id="status-badge" title="Execute status_server.py e clique em Atualizar"></div>
     <button id="refresh-btn" onclick="refreshStatus()" title="Requer status_server.py rodando">↻ Atualizar</button>
     <button id="theme-btn" onclick="toggleTheme()" title="Tema claro/escuro">◑</button>
+    <button onclick="doLogout()" title="Sair" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px">Sair</button>
   </div>
 </div>
 
@@ -427,14 +469,14 @@ const GROUP_SIZE = {
   runner:   { font: 11, margin: { top: 7, right:10, bottom: 7, left:10 }, widthConstraint: { minimum: 70  } },
 };
 
-function buildVisNode(n) {
+function buildVisNode(n, savedPos) {
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
   const colMap  = isLight ? GROUP_COLORS_LIGHT : GROUP_COLORS;
   const fntMap  = isLight ? GROUP_FONT_COLOR_LIGHT : GROUP_FONT_COLOR;
   const gc = colMap[n.group] || colMap.pipeline;
   const sb = STATUS_BORDER[n.status];
   const gs = GROUP_SIZE[n.group] || GROUP_SIZE.service;
-  return {
+  const visNode = {
     id: n.id, label: (GROUP_ICON[n.group] ? GROUP_ICON[n.group] + '  ' : '') + n.label, group: n.group, shape: 'box',
     color: { border: sb || gc.border, background: gc.background, highlight: gc.highlight },
     font: { color: fntMap[n.group] || (isLight ? '#1a1d3a' : '#e2e4f0'), size: gs.font, bold: n.group === 'pipeline' || n.group === 'database' },
@@ -443,6 +485,8 @@ function buildVisNode(n) {
     borderWidth: sb ? 2 : 1,
     shadow: { enabled: true, size: n.group === 'pipeline' ? 10 : 5, x: 2, y: 2, color: (gc.border + '55') },
   };
+  if (savedPos && savedPos[n.id]) { visNode.x = savedPos[n.id].x; visNode.y = savedPos[n.id].y; }
+  return visNode;
 }
 
 function buildVisEdge(e) {
@@ -461,13 +505,15 @@ function buildVisEdge(e) {
 }
 
 function rebuildNetwork(filterGroup) {
+  const savedPos = loadPositions(filterGroup);
+  const hasSaved = Object.keys(savedPos).length > 0;
   const nodeIds = new Set();
   const visNodes = new vis.DataSet();
   const visEdges = new vis.DataSet();
 
   NODES.forEach(n => {
     if (filterGroup === 'all' || n.group === filterGroup) {
-      visNodes.add(buildVisNode(n));
+      visNodes.add(buildVisNode(n, savedPos));
       nodeIds.add(n.id);
     }
   });
@@ -478,12 +524,13 @@ function rebuildNetwork(filterGroup) {
   const container = document.getElementById('mynetwork');
   const opts = {
     physics: {
+      enabled: !hasSaved,
       solver: 'forceAtlas2Based',
       forceAtlas2Based: { gravitationalConstant: -80, springLength: 180, springConstant: .05, damping: .7 },
       stabilization: { iterations: 200 },
     },
     interaction: { hover: true, tooltipDelay: 100 },
-    layout: { improvedLayout: true },
+    layout: { improvedLayout: !hasSaved },
   };
 
   visNodesDS = visNodes;
@@ -491,7 +538,12 @@ function rebuildNetwork(filterGroup) {
 
   if (network) { network.destroy(); network = null; }
   network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, opts);
-  network.once('stabilizationIterationsDone', () => network.setOptions({ physics: { enabled: false } }));
+  if (hasSaved) {
+    network.setOptions({ physics: { enabled: false } });
+  } else {
+    network.once('stabilizationIterationsDone', () => network.setOptions({ physics: { enabled: false } }));
+  }
+  network.on('dragEnd', savePositions);
   network.on('click', p => {
     if (p.nodes.length) { highlightConnected(p.nodes[0]); showPanel(p.nodes[0]); }
     else { resetHighlight(); closePanel(); }
@@ -1160,14 +1212,55 @@ function updateBadge() {
   badge.textContent = `${dot} ${ok} ok${fail > 0 ? ' · ' + fail + ' erro' : ''}${pend > 0 ? ' · ' + pend + ' aviso' : ''} · ${upd}`;
 }
 
+// ── POSITION PERSISTENCE ─────────────────────────────────────────────────────
+
+function savePositions() {
+  if (!network) return;
+  try { localStorage.setItem('mapa_pos_' + currentFilter, JSON.stringify(network.getPositions())); } catch {}
+}
+
+function loadPositions(filter) {
+  try { const s = localStorage.getItem('mapa_pos_' + filter); return s ? JSON.parse(s) : {}; } catch { return {}; }
+}
+
+// ── LOGIN ────────────────────────────────────────────────────────────────────
+
+function doLogin() {
+  const pwd = document.getElementById('login-pwd').value;
+  const correct = (typeof LOGIN_PWD !== 'undefined') ? LOGIN_PWD : 'argoplan';
+  if (pwd === correct) {
+    sessionStorage.setItem('mapa_auth', '1');
+    document.getElementById('login-overlay').classList.remove('open');
+    initApp();
+  } else {
+    document.getElementById('login-err').textContent = 'Senha incorreta. Tente novamente.';
+    document.getElementById('login-pwd').value = '';
+    document.getElementById('login-pwd').focus();
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('mapa_auth');
+  location.reload();
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────────────
+
+function initApp() {
+  applyStatuses();
+  rebuildNetwork('all');
+  buildPills();
+}
 
 (function init() {
   const saved = localStorage.getItem('theme');
   if (saved) document.documentElement.setAttribute('data-theme', saved);
-  applyStatuses();
-  rebuildNetwork('all');
-  buildPills();
+  if (!sessionStorage.getItem('mapa_auth')) {
+    document.getElementById('login-overlay').classList.add('open');
+    setTimeout(() => { const el = document.getElementById('login-pwd'); if (el) el.focus(); }, 100);
+    return;
+  }
+  initApp();
 })();
 </script>
 </body>

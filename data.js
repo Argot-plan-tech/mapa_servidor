@@ -2,6 +2,8 @@
 // MAPA DO SERVIDOR — DATA.JS
 // =============================================================================
 
+const LOGIN_PWD = 'argoplan';   // altere aqui para mudar a senha
+
 const NODES = [
 
   // ── PIPELINES ──────────────────────────────────────────────────────────────
