@@ -8,13 +8,14 @@ import os, json, time, subprocess, tempfile
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
-PORT       = int(os.environ.get('PORT', 5678))
-SSH_HOST   = os.environ.get('SSH_HOST',  '20.94.160.24')
-SSH_USER   = os.environ.get('SSH_USER',  'vinicius-argo')
-SCRIPT     = '/home/vinicius-argo/generate_map_status.py'
-CACHE_FILE = '/home/vinicius-argo/mapserver/status_cache.json'
+PORT        = int(os.environ.get('PORT', 8080))
+LOCAL_MODE  = os.environ.get('LOCAL_MODE', '0') == '1'   # 1 = rodando no próprio servidor
+SSH_HOST    = os.environ.get('SSH_HOST',  '20.94.160.24')
+SSH_USER    = os.environ.get('SSH_USER',  'vinicius-argo')
+SCRIPT      = '/home/vinicius-argo/generate_map_status.py'
+CACHE_FILE  = '/home/vinicius-argo/mapserver/status_cache.json'
 CACHE_MAX_AGE = 360   # segundos
-BASE_DIR   = Path(__file__).parent
+BASE_DIR    = Path(__file__).parent
 
 # ── Chave SSH: env var (Railway) ou arquivo local
 _SSH_KEY_ENV  = os.environ.get('SSH_PRIVATE_KEY', '')
@@ -54,6 +55,28 @@ def ssh(cmd, timeout=45):
     return r.stdout.strip()
 
 def fetch_status():
+    if LOCAL_MODE:
+        return fetch_status_local()
+    return fetch_status_ssh()
+
+def fetch_status_local():
+    # Rodando no próprio servidor — chama o script diretamente
+    cache = Path(CACHE_FILE)
+    if cache.exists() and (time.time() - cache.stat().st_mtime) < CACHE_MAX_AGE:
+        raw    = cache.read_text(encoding='utf-8')
+        source = f'cache local ({int(time.time()-cache.stat().st_mtime)}s atrás)'
+    else:
+        r = subprocess.run(['python3', SCRIPT], capture_output=True, text=True, timeout=50)
+        if r.returncode != 0:
+            raise Exception(r.stderr.strip() or 'Script falhou')
+        raw    = r.stdout.strip()
+        source = 'script ao vivo'
+    data = json.loads(raw)
+    data['_source'] = source
+    return data
+
+def fetch_status_ssh():
+    # Rodando remotamente — conecta via SSH
     try:
         age_str = ssh(
             f'python3 -c "import os,time; f=\\"{CACHE_FILE}\\"; '
@@ -169,7 +192,10 @@ class Handler(BaseHTTPRequestHandler):
 
 print('=' * 52)
 print(f'  Mapa do Servidor  —  porta {PORT}')
-print(f'  SSH: {SSH_USER}@{SSH_HOST}')
-print(f'  Chave: {"env var" if _SSH_KEY_ENV else _SSH_KEY_FILE}')
+if LOCAL_MODE:
+    print(f'  Modo: LOCAL (servidor direto)')
+else:
+    print(f'  Modo: SSH → {SSH_USER}@{SSH_HOST}')
+    print(f'  Chave: {"env var" if _SSH_KEY_ENV else _SSH_KEY_FILE}')
 print('=' * 52)
 HTTPServer(('0.0.0.0', PORT), Handler).serve_forever()
