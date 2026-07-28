@@ -384,6 +384,18 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <input id="search" type="text" placeholder="Buscar nó..." oninput="doSearch(this.value)">
     <div id="status-badge" title="Execute status_server.py e clique em Atualizar"></div>
     <button id="refresh-btn" onclick="refreshStatus()" title="Requer status_server.py rodando">↻ Atualizar</button>
+    <div class="sep"></div>
+    <span style="font-size:11px;color:var(--text2);white-space:nowrap">Auto:</span>
+    <button id="auto-btn" onclick="toggleAutoRefresh()" title="Ligar/desligar atualização automática"
+      style="padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:12px;transition:all .15s">OFF</button>
+    <select id="auto-interval" onchange="onAutoIntervalChange()"
+      style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:3px 6px;font-size:12px;cursor:pointer">
+      <option value="5">5 min</option>
+      <option value="10" selected>10 min</option>
+      <option value="15">15 min</option>
+      <option value="30">30 min</option>
+    </select>
+    <span id="auto-countdown" style="font-size:11px;color:var(--ok);font-family:monospace;white-space:nowrap;min-width:40px"></span>
     <button id="theme-btn" onclick="toggleTheme()" title="Tema claro/escuro">◑</button>
     <button onclick="doLogout()" title="Sair" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px">Sair</button>
   </div>
@@ -1212,6 +1224,54 @@ function updateBadge() {
   badge.textContent = `${dot} ${ok} ok${fail > 0 ? ' · ' + fail + ' erro' : ''}${pend > 0 ? ' · ' + pend + ' aviso' : ''} · ${upd}`;
 }
 
+// ── AUTO REFRESH ─────────────────────────────────────────────────────────────
+
+let _autoTimer     = null;
+let _autoRemaining = 0;
+
+function toggleAutoRefresh() {
+  if (_autoTimer) stopAutoRefresh(); else startAutoRefresh();
+}
+
+function startAutoRefresh() {
+  const min = parseInt(document.getElementById('auto-interval').value) || 10;
+  _autoRemaining = min * 60;
+  const btn = document.getElementById('auto-btn');
+  btn.textContent = 'ON';
+  btn.style.background = 'var(--ok)';
+  btn.style.color = '#fff';
+  btn.style.borderColor = 'var(--ok)';
+  _autoTimer = setInterval(() => {
+    _autoRemaining--;
+    const m = Math.floor(_autoRemaining / 60);
+    const s = String(_autoRemaining % 60).padStart(2, '0');
+    document.getElementById('auto-countdown').textContent = `${m}:${s}`;
+    if (_autoRemaining <= 0) {
+      _autoRemaining = parseInt(document.getElementById('auto-interval').value) * 60;
+      refreshStatus();
+    }
+  }, 1000);
+  localStorage.setItem('mapa_auto', '1');
+  localStorage.setItem('mapa_auto_min', min);
+}
+
+function stopAutoRefresh() {
+  clearInterval(_autoTimer);
+  _autoTimer = null;
+  const btn = document.getElementById('auto-btn');
+  btn.textContent = 'OFF';
+  btn.style.background = '';
+  btn.style.color = '';
+  btn.style.borderColor = '';
+  document.getElementById('auto-countdown').textContent = '';
+  localStorage.removeItem('mapa_auto');
+}
+
+function onAutoIntervalChange() {
+  if (_autoTimer) { stopAutoRefresh(); startAutoRefresh(); }
+  else localStorage.setItem('mapa_auto_min', document.getElementById('auto-interval').value);
+}
+
 // ── POSITION PERSISTENCE ─────────────────────────────────────────────────────
 
 function savePositions() {
@@ -1250,6 +1310,13 @@ function initApp() {
   applyStatuses();
   rebuildNetwork('all');
   buildPills();
+  // Restaura auto-refresh se estava ligado
+  const savedMin = localStorage.getItem('mapa_auto_min');
+  if (savedMin) {
+    const sel = document.getElementById('auto-interval');
+    if (sel) { for (let o of sel.options) { if (o.value === savedMin) o.selected = true; } }
+  }
+  if (localStorage.getItem('mapa_auto') === '1') startAutoRefresh();
 }
 
 (function init() {
