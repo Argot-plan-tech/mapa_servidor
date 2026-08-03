@@ -1,0 +1,41 @@
+name: Update Server Status
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # a cada 15 minutos
+  workflow_dispatch:           # permite rodar manualmente
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 20.94.160.24 >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Gerar status.js via servidor
+        run: |
+          ssh -i ~/.ssh/id_rsa \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=20 \
+              vinicius-argo@20.94.160.24 \
+              "python3 /home/vinicius-argo/generate_map_status.py" \
+            | python3 .github/scripts/json_to_status_js.py - > status.js
+
+      - name: Commit e push (somente se mudou)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add status.js
+          git diff --staged --quiet && echo "Sem mudanças" && exit 0
+          git commit -m "auto: status $(date -u '+%d/%m/%Y %H:%M') UTC"
+          git push
