@@ -119,12 +119,14 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .badge-service    { background: #2a1f40; color: #a78bfa; }
 .badge-monitor    { background: #2d2a10; color: #fbbf24; }
 .badge-runner     { background: #202830; color: #38bdf8; }
+.badge-bi         { background: #2d1a08; color: #fb923c; }
 [data-theme="light"] .badge-pipeline { background: #e8edf8; color: #3d5afe; }
 [data-theme="light"] .badge-database { background: #e0f2f1; color: #00897b; }
 [data-theme="light"] .badge-external { background: #ffebee; color: #e53935; }
 [data-theme="light"] .badge-service  { background: #f3e5f5; color: #7b1fa2; }
 [data-theme="light"] .badge-monitor  { background: #fff8e1; color: #f57f17; }
 [data-theme="light"] .badge-runner   { background: #e1f5fe; color: #0277bd; }
+[data-theme="light"] .badge-bi      { background: #fff7ed; color: #c2410c; }
 
 .section { margin-top: 14px; }
 .section-title {
@@ -376,6 +378,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   <button class="filter-btn" onclick="setFilter('runner',this)">Runners</button>
   <button class="filter-btn" onclick="setFilter('service',this)">Serviços</button>
   <button class="filter-btn" onclick="setFilter('monitor',this)">Monitores</button>
+  <button class="filter-btn" onclick="setFilter('bi',this)">BI</button>
   <div class="sep"></div>
   <button class="view-btn active" id="btn-graph" onclick="setView('graph')">⬡ Grafo</button>
   <button class="view-btn" id="btn-timeline" onclick="setView('timeline')">⏱ Timeline</button>
@@ -416,6 +419,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <div><span class="dot" style="background:#a78bfa"></span> Serviço</div>
       <div><span class="dot" style="background:#fbbf24"></span> Monitor</div>
       <div><span class="dot" style="background:#38bdf8"></span> Runner</div>
+      <div><span class="dot" style="background:#fb923c"></span> Relatório BI</div>
     </div>
   </div>
 
@@ -444,6 +448,7 @@ const GROUP_COLORS = {
   service:  { border:'#a78bfa', background:'#2a1f40', highlight:{border:'#c4b5fd',background:'#3b2a55'} },
   monitor:  { border:'#fbbf24', background:'#2d2a10', highlight:{border:'#fde68a',background:'#3d3a18'} },
   runner:   { border:'#38bdf8', background:'#0f2d40', highlight:{border:'#7dd3fc',background:'#163d55'} },
+  bi:       { border:'#fb923c', background:'#2d1a08', highlight:{border:'#fdba74',background:'#3d2510'} },
 };
 const GROUP_COLORS_LIGHT = {
   pipeline: { border:'#3d5afe', background:'#e8edf8', highlight:{border:'#1a237e',background:'#c5cae9'} },
@@ -452,11 +457,12 @@ const GROUP_COLORS_LIGHT = {
   service:  { border:'#7b1fa2', background:'#f3e5f5', highlight:{border:'#4a148c',background:'#e1bee7'} },
   monitor:  { border:'#f57f17', background:'#fff8e1', highlight:{border:'#e65100',background:'#ffe082'} },
   runner:   { border:'#0277bd', background:'#e1f5fe', highlight:{border:'#01579b',background:'#b3e5fc'} },
+  bi:       { border:'#ea580c', background:'#fff7ed', highlight:{border:'#c2410c',background:'#fed7aa'} },
 };
 const STATUS_BORDER = { ok:'#34d399', fail:'#f87171', pending:'#fbbf24' };
-const GROUP_FONT_COLOR = { pipeline:'#6c8fff', database:'#34d399', external:'#f87171', service:'#a78bfa', monitor:'#fbbf24', runner:'#38bdf8' };
-const GROUP_FONT_COLOR_LIGHT = { pipeline:'#1a237e', database:'#004d40', external:'#b71c1c', service:'#4a148c', monitor:'#bf360c', runner:'#01579b' };
-const BADGE_LABEL = { pipeline:'Pipeline', database:'Banco de Dados', external:'Fonte Externa', service:'Serviço', monitor:'Monitor', runner:'Runner CI/CD' };
+const GROUP_FONT_COLOR = { pipeline:'#6c8fff', database:'#34d399', external:'#f87171', service:'#a78bfa', monitor:'#fbbf24', runner:'#38bdf8', bi:'#fb923c' };
+const GROUP_FONT_COLOR_LIGHT = { pipeline:'#1a237e', database:'#004d40', external:'#b71c1c', service:'#4a148c', monitor:'#bf360c', runner:'#01579b', bi:'#c2410c' };
+const BADGE_LABEL = { pipeline:'Pipeline', database:'Banco de Dados', external:'Fonte Externa', service:'Serviço', monitor:'Monitor', runner:'Runner CI/CD', bi:'Relatório BI' };
 
 let network = null;
 let currentFilter = 'all';
@@ -471,6 +477,7 @@ const GROUP_ICON = {
   service:  '⚡',
   monitor:  '📡',
   runner:   '🚀',
+  bi:       '📊',
 };
 
 const GROUP_SIZE = {
@@ -480,6 +487,7 @@ const GROUP_SIZE = {
   monitor:  { font: 12, margin: { top:10, right:14, bottom:10, left:14 }, widthConstraint: { minimum: 90  } },
   service:  { font: 11, margin: { top: 8, right:12, bottom: 8, left:12 }, widthConstraint: { minimum: 80  } },
   runner:   { font: 11, margin: { top: 7, right:10, bottom: 7, left:10 }, widthConstraint: { minimum: 70  } },
+  bi:       { font: 13, margin: { top:13, right:17, bottom:13, left:17 }, widthConstraint: { minimum: 105 } },
 };
 
 function buildVisNode(n, savedPos) {
@@ -740,6 +748,9 @@ function showPanel(id) {
         ${t.cols ? `<div class="table-cols">${t.cols.map(c => `<span class="col-tag">${c}</span>`).join('')}</div>` : ''}
       </div>`).join(''));
   }
+
+  if (node.pages && node.pages.length)
+    h += sect('Páginas do Relatório', node.pages.map(p => `<div class="proc-item">📄 ${p}</div>`).join(''));
 
   if (node.alimentado_por) h += sect('Alimentado por', node.alimentado_por.map(a => `<span class="tag">${a}</span>`).join(''));
 

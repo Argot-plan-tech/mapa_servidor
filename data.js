@@ -543,6 +543,87 @@ const NODES = [
   { id: "ext_concorrentes", label: "Allos /\nMultiplan",     group: "external", status: "neutral", description: "Sites de RI da Allos e Multiplan. Playwright navega e baixa planilhas trimestrais de resultados automaticamente.", info: "Allos: ri.allos.com.br/informacoes-financeiras/fundamentos-e-planilhas/\nMultiplan: ri.multiplan.com.br/ferramentas-de-analise/central-de-resultados/\nAuth: Playwright headless (público)" },
   { id: "ext_github",       label: "GitHub\nArgot-plan-tech","group": "external", status: "neutral", description: "Organização GitHub da Argoplan Tech com CI/CD configurado via GitHub Actions e runners auto-hospedados.", info: "Organização: Argot-plan-tech\nRepos: DataLake_Group / energia / inteligencia / Parking_Flow\nCI/CD: GitHub Actions — self-hosted runners\nWebhook: push → webhook_server.py :9000" },
   { id: "ext_teams",        label: "Microsoft\nTeams",       group: "external", status: "neutral", description: "Canal Teams que recebe notificações automáticas de status diariamente às 11:30.", info: "Tipo: Incoming Webhook\nURL: portalargo.webhook.office.com\nFormato: Adaptive Card\nHorário: 11:30 diário" },
+  { id: "ext_source_gbi",  label: "SQL Server\nFonte GBI",  group: "external", status: "neutral", description: "SQL Server de origem na Skyone Cloud. Contém os dados brutos do sistema GBI Shopping — lidos diretamente pelos BIs (conexão direta) e pelo pipeline DataLake Group.", info: "Host: gsft-comp-bd-06.skyone.app\nBancos: 18650_Argo_GBI_Shopping · 19393_ShoppingViaBrasil_GBI_Shopping\nAcesso: somente leitura\nConectado por: DataLake Group (bronze) + todos os BIs (import direto)" },
+
+  // ── RELATÓRIOS BI ─────────────────────────────────────────────────────────
+
+  {
+    id: "bi_group", label: "BI Group\nProdução", group: "bi", status: "neutral",
+    description: "Relatório Power BI consolidado de produção. Reúne todas as análises: vendas, inadimplência, custo de ocupação, indicadores comerciais e highlights. Modelo com 43 tabelas e 26 páginas.",
+    info: "Repo: bi-group-projects/BI Group - Produção\nFormato: .pbip (git-friendly)\nTabelas: 43 | Páginas: 26\nÚltimo commit: 31/07/2026",
+    pages: ["HOME", "Resumo", "Mapa", "Mapa - 12 meses", "Por loja", "Por loja - 12 meses", "Comparativo de Vendas", "Vendas", "Vendas_analitico", "CestasVendas", "SSS", "SSS_YTD", "Comercial", "Comercial_2", "Consulta - Ind. Comerciais", "Consulta multipla de contratos", "Consulta_contrato", "Lojas_shopping", "Inadimplência", "Analítico", "Tendência", "Tendência M-1", "Vencidos", "M&M - Recebido", "Multa Rescisória", "Custo de Ocupação"],
+    tables_read: [
+      { table: "gold.vw_vendas_mensal_loja",      load: "import Power BI" },
+      { table: "GROUP.gold.* (faturamento, receita, contratos)", load: "import" },
+      { table: "Dimensao.dbo.* (dim lojas, shoppings)", load: "import" },
+      { table: "18650_Argo_GBI_Shopping (DB1 direto)", load: "import direto" },
+      { table: "19393_ShoppingViaBrasil_GBI_Shopping (DB2 direto)", load: "import direto" },
+    ],
+    notes: "BI de produção — combina todos os outros BIs em um único modelo. Conecta tanto no gold layer do DataLake quanto direto na fonte GBI.",
+  },
+
+  {
+    id: "bi_vendas", label: "BI\nVendas", group: "bi", status: "neutral",
+    description: "Análise de vendas por loja e shopping. Inclui SSS (Same Store Sales), comparativo mensal, cestas de vendas e visão por 12 meses.",
+    info: "Repo: bi-group-projects/BI Vendas\nFormato: .pbip\nTabelas: 23 | Páginas: 10\nÚltimo commit: 19/06/2026",
+    pages: ["Vendas", "Vendas_analitico", "Mapa", "Mapa - 12 meses", "Por loja", "Por loja - 12 meses", "Comparativo de Vendas", "SSS", "SSS_YTD", "CestasVendas"],
+    tables_read: [
+      { table: "gold.vw_vendas_mensal_loja", load: "import Power BI" },
+      { table: "GROUP.gold.* (SSS, vendas mensais)", load: "import" },
+      { table: "Dimensao.dbo.* (dim lojas, shoppings)", load: "import" },
+      { table: "18650_Argo_GBI_Shopping (fFaturamento, fReceita, dLojas...)", load: "import direto" },
+    ],
+  },
+
+  {
+    id: "bi_comercial", label: "BI\nComercial", group: "bi", status: "neutral",
+    description: "Indicadores comerciais dos shoppings: contratos, lojas ativas, vacância e consultas analíticas de desempenho.",
+    info: "Repo: bi-group-projects/BI Comercial\nFormato: .pbip\nTabelas: 22 | Páginas: 5\nÚltimo commit: 19/06/2026",
+    pages: ["Comercial", "Consulta - Ind. Comerciais", "Consulta multipla de contratos", "Consulta_contrato", "Lojas_shopping"],
+    tables_read: [
+      { table: "gold.vw_vendas_mensal_loja", load: "import Power BI" },
+      { table: "Dimensao.dbo.* (dim lojas, shoppings)", load: "import" },
+      { table: "18650_Argo_GBI_Shopping (fFaturamento, fContratos, dLojas...)", load: "import direto" },
+    ],
+  },
+
+  {
+    id: "bi_inadimplencia", label: "BI\nInadimplência", group: "bi", status: "neutral",
+    description: "Análise de inadimplência dos shoppings: tendências, vencidos, multas rescisórias e exportação analítica.",
+    info: "Repo: bi-group-projects/BI Inadimplencia\nFormato: .pbip\nTabelas: 28 | Páginas: 8\nÚltimo commit: 19/06/2026",
+    pages: ["Inadimplência", "Analítico", "Tendência", "Tendência M-1", "Vencidos", "M&M - Recebido", "Multa Rescisória", "Export_Inadimplencia"],
+    tables_read: [
+      { table: "gold.inadimplencia_mensal_loja", load: "import Power BI" },
+      { table: "gold.vw_vendas_mensal_loja",    load: "import Power BI" },
+      { table: "Dimensao.dbo.* (dim lojas, shoppings)", load: "import" },
+      { table: "18650_Argo_GBI_Shopping (fInadimplencia, dLojas...)", load: "import direto" },
+    ],
+  },
+
+  {
+    id: "bi_custo", label: "BI Custo\nOcupação", group: "bi", status: "neutral",
+    description: "Análise de custo de ocupação por loja e shopping. Consolida despesas de aluguel, condomínio e fundo de promoção.",
+    info: "Repo: bi-group-projects/BI Custo de Ocupacao\nFormato: .pbip\nTabelas: 21 | Páginas: 1\nÚltimo commit: 19/06/2026",
+    pages: ["Custo de Ocupação"],
+    tables_read: [
+      { table: "gold.vw_vendas_mensal_loja", load: "import Power BI" },
+      { table: "GROUP.gold.* (custo ocupação mensal)", load: "import" },
+      { table: "Dimensao.dbo.* (dim lojas, shoppings)", load: "import" },
+      { table: "18650_Argo_GBI_Shopping (fCustoOcupacao...)", load: "import direto" },
+    ],
+  },
+
+  {
+    id: "bi_highlights", label: "BI\nHighlights", group: "bi", status: "neutral",
+    description: "Painel executivo de destaques dos shoppings. Visão consolidada dos principais KPIs para apresentações de diretoria.",
+    info: "Repo: bi-group-projects/BI Highlights\nFormato: .pbip\nTabelas: 11 | Páginas: 1\nÚltimo commit: 19/06/2026",
+    pages: ["Highlights"],
+    tables_read: [
+      { table: "gold.vw_vendas_mensal_loja", load: "import Power BI" },
+      { table: "Dimensao.dbo.* (dim lojas, shoppings)", load: "import" },
+      { table: "18650_Argo_GBI_Shopping (resumo KPIs)", load: "import direto" },
+    ],
+  },
 
   // ── RUNNERS CI/CD ──────────────────────────────────────────────────────────
 
@@ -597,4 +678,26 @@ const EDGES = [
   { from: "svc_sqlserver", to: "db_condflow",     dashes: true },
   { from: "svc_sqlserver", to: "db_onepage",      dashes: true },
   { from: "svc_sqlserver", to: "db_inteligencia", dashes: true },
+  // Fonte GBI → pipeline + BIs
+  { from: "ext_source_gbi", to: "dl",               label: "BI_*", dashes: true },
+  { from: "ext_source_gbi", to: "bi_group",         label: "direto", dashes: true },
+  { from: "ext_source_gbi", to: "bi_vendas",        label: "direto", dashes: true },
+  { from: "ext_source_gbi", to: "bi_comercial",     label: "direto", dashes: true },
+  { from: "ext_source_gbi", to: "bi_inadimplencia", label: "direto", dashes: true },
+  { from: "ext_source_gbi", to: "bi_custo",         label: "direto", dashes: true },
+  { from: "ext_source_gbi", to: "bi_highlights",    label: "direto", dashes: true },
+  // Gold layer → BIs
+  { from: "db_datalake", to: "bi_group",         label: "gold views" },
+  { from: "db_datalake", to: "bi_vendas",        label: "gold views" },
+  { from: "db_datalake", to: "bi_comercial",     label: "gold views" },
+  { from: "db_datalake", to: "bi_inadimplencia", label: "gold views" },
+  { from: "db_datalake", to: "bi_custo",         label: "gold views" },
+  { from: "db_datalake", to: "bi_highlights",    label: "gold views" },
+  // Dimensao → BIs
+  { from: "db_dimensao", to: "bi_group",         dashes: true },
+  { from: "db_dimensao", to: "bi_vendas",        dashes: true },
+  { from: "db_dimensao", to: "bi_comercial",     dashes: true },
+  { from: "db_dimensao", to: "bi_inadimplencia", dashes: true },
+  { from: "db_dimensao", to: "bi_custo",         dashes: true },
+  { from: "db_dimensao", to: "bi_highlights",    dashes: true },
 ];
