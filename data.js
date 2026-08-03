@@ -2,7 +2,7 @@
 // MAPA DO SERVIDOR — DATA.JS
 // =============================================================================
 
-const LOGIN_PWD = 'argoplan';   // altere aqui para mudar a senha
+const LOGIN_PWD = '7lzB2FB12wn5Bmal0k9D';   // altere aqui para mudar a senha
 const API_URL   = '';           // deixe vazio para detectar automaticamente
                                 // ou coloque ex: 'https://mapa-servidor.up.railway.app'
 
