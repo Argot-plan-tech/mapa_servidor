@@ -2,8 +2,8 @@ name: Update Server Status
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # a cada 15 minutos
-  workflow_dispatch:           # permite rodar manualmente
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 jobs:
   update:
@@ -18,9 +18,21 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 20.94.160.24 >> ~/.ssh/known_hosts 2>/dev/null
+          echo "Chave gerada:"
+          head -1 ~/.ssh/id_rsa
+          tail -1 ~/.ssh/id_rsa
+
+      - name: Testar conexão SSH
+        run: |
+          ssh -i ~/.ssh/id_rsa \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=20 \
+              -v \
+              vinicius-argo@20.94.160.24 \
+              "echo 'SSH OK'" 2>&1 | tail -20
 
       - name: Gerar status.js via servidor
         run: |
