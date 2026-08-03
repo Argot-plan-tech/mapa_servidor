@@ -382,8 +382,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   <button class="view-btn" id="btn-server" onclick="setView('server')">🖥 Servidor</button>
   <div id="search-wrap">
     <input id="search" type="text" placeholder="Buscar nó..." oninput="doSearch(this.value)">
-    <div id="status-badge" title="Execute status_server.py e clique em Atualizar"></div>
-    <button id="refresh-btn" onclick="refreshStatus()" title="Requer status_server.py rodando">↻ Atualizar</button>
+    <div id="status-badge" title="Dados atualizados automaticamente a cada 15 min pelo servidor"></div>
+    <button id="refresh-btn" onclick="refreshStatus()" title="Recarrega status.js do servidor">↻ Atualizar</button>
     <div class="sep"></div>
     <span style="font-size:11px;color:var(--text2);white-space:nowrap">Auto:</span>
     <button id="auto-btn" onclick="toggleAutoRefresh()" title="Ligar/desligar atualização automática"
@@ -1076,24 +1076,24 @@ function toggleTheme() {
 // ── REFRESH STATUS (botão) ───────────────────────────────────────────────────
 
 async function refreshStatus() {
-  const btn = document.getElementById('refresh-btn');
+  const btn   = document.getElementById('refresh-btn');
   const badge = document.getElementById('status-badge');
   btn.disabled = true;
   btn.textContent = '↻ Buscando…';
-  badge.textContent = '⏳ conectando…';
-  const apiBase = (typeof API_URL !== 'undefined' && API_URL)
-    ? API_URL.replace(/\/$/, '')
-    : ((['localhost','127.0.0.1'].includes(window.location.hostname))
-       ? 'http://localhost:5678'
-       : window.location.origin);
+  badge.textContent = '⏳ carregando…';
+  badge.style.color = 'var(--text2)';
   try {
-    const resp = await fetch(apiBase + '/refresh', { signal: AbortSignal.timeout(45000) });
+    // Busca status.js com cache-busting
+    const resp = await fetch('status.js?_=' + Date.now(), { signal: AbortSignal.timeout(15000) });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const result = await resp.json();
-    if (!result.ok) throw new Error(result.error || 'Erro desconhecido');
+    const text = await resp.text();
+    // Executa o JS para extrair as variáveis
+    const fn = new Function(text + '; return { ps: typeof PIPELINE_STATUS !== "undefined" ? PIPELINE_STATUS : null, ss: typeof SERVER_STATUS !== "undefined" ? SERVER_STATUS : null, ua: typeof STATUS_UPDATED_AT !== "undefined" ? STATUS_UPDATED_AT : null };');
+    const { ps, ss, ua } = fn();
+    if (!ps) throw new Error('PIPELINE_STATUS não encontrado');
 
     // Aplica em memória
-    Object.entries(result.pipelines).forEach(([id, p]) => {
+    Object.entries(ps).forEach(([id, p]) => {
       const node = NODES.find(n => n.id === id);
       if (!node) return;
       node.status    = p.status;
@@ -1104,28 +1104,20 @@ async function refreshStatus() {
       node._history  = p.history  || [];
       node._last_log = p.last_log || [];
     });
-
-    // Reconstrói grafo e pills com os novos status
     rebuildNetwork(currentFilter);
     buildPills();
-    // Atualiza SERVER_STATUS em memória
-    if (result.server) { window.SERVER_STATUS = result.server; }
-    if (result.disk)   { window.DISK_STATUS   = result.disk;   }
-    showDiskBanner(result.disk || []);
+    if (ss) { window.SERVER_STATUS = ss; if (ss.disk) showDiskBanner(ss.disk); }
     updateBadge();
     if (document.getElementById('server-view').classList.contains('active')) buildServerView();
+    badge.textContent = ua ? '✅ ' + ua : '✅ Atualizado';
+    badge.style.color = 'var(--ok)';
     btn.textContent = '↻ Atualizar';
     btn.disabled = false;
   } catch (err) {
     btn.textContent = '↻ Atualizar';
     btn.disabled = false;
-    if (err.message.includes('fetch') || err.message.includes('Failed') || err.message.includes('NetworkError')) {
-      badge.textContent = '⚠️ status_server.py não está rodando';
-      badge.style.color = 'var(--warn)';
-    } else {
-      badge.textContent = '❌ ' + err.message;
-      badge.style.color = 'var(--fail)';
-    }
+    badge.textContent = '❌ ' + err.message;
+    badge.style.color = 'var(--fail)';
   }
 }
 
