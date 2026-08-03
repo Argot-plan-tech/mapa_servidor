@@ -66,6 +66,8 @@ def main():
     lines.append("")
     lines.append(f'const STATUS_UPDATED_AT = "{updated}";')
     lines.append("")
+    lines.append(f'const DISK_STATUS = {disk_js};')
+    lines.append("")
 
     print("\n".join(lines))
 
