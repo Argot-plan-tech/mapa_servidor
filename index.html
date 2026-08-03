@@ -381,7 +381,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   <button class="view-btn" id="btn-timeline" onclick="setView('timeline')">⏱ Timeline</button>
   <button class="view-btn" id="btn-server" onclick="setView('server')">🖥 Servidor</button>
   <div id="search-wrap">
-    <input id="search" type="text" placeholder="Buscar nó..." oninput="doSearch(this.value)">
+    <input id="search" type="text" placeholder="Buscar nó..." oninput="doSearch(this.value)" onkeydown="if(event.key==='Enter')doSearch(this.value)">
+    <button onclick="doSearch(document.getElementById('search').value)" title="Buscar" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">🔍</button>
     <div id="status-badge" title="Dados atualizados automaticamente a cada 15 min pelo servidor"></div>
     <button id="refresh-btn" onclick="refreshStatus()" title="Recarrega status.js do servidor">↻ Atualizar</button>
     <div class="sep"></div>
@@ -637,14 +638,24 @@ function setFilter(g, btn) {
 }
 
 function doSearch(q) {
-  if (!q.trim()) { if (network) network.fit(); return; }
+  const inp = document.getElementById('search');
+  if (!q.trim()) { if (network) network.fit(); if (inp) { inp.style.borderColor=''; inp.title=''; } return; }
   const lq = q.toLowerCase();
   const match = NODES.find(n =>
     n.id.toLowerCase().includes(lq) ||
     n.label.toLowerCase().includes(lq) ||
     (n.description || '').toLowerCase().includes(lq)
   );
-  if (match) focusNode(match.id);
+  if (match) {
+    if (inp) { inp.style.borderColor = 'var(--ok)'; inp.title = ''; }
+    focusNode(match.id);
+  } else {
+    if (inp) {
+      inp.style.borderColor = 'var(--fail)';
+      inp.title = 'Nenhum nó encontrado';
+      setTimeout(() => { inp.style.borderColor = ''; inp.title = ''; }, 1500);
+    }
+  }
 }
 
 function focusNode(id) {
