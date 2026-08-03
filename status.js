@@ -16,21 +16,21 @@ const SERVER_STATUS = {
   "hostname": "vm-database-01",
   "os": "Ubuntu 24.04.4 LTS",
   "kernel": "6.17.0-1008-azure",
-  "cpu_pct": 28.6,
+  "cpu_pct": 54.8,
   "ram_used_gb": 13.8,
   "ram_total_gb": 15.6,
   "ram_pct": 88.9,
-  "load1": "0.03",
-  "load5": "0.03",
+  "load1": "0.01",
+  "load5": "0.02",
   "load15": "0.00",
-  "uptime": "137d 18h 33m",
+  "uptime": "137d 18h 48m",
   "proc_count": 211,
   "services": [{"id": "mssql", "label": "SQL Server :1433", "running": true}, {"id": "webhook", "label": "Webhook :9000", "running": true}, {"id": "cronlog", "label": "CronLog :5000", "running": true}, {"id": "runner_dl", "label": "Runner DataLake", "running": false}, {"id": "runner_e", "label": "Runner Energia", "running": false}, {"id": "runner_i", "label": "Runner Inteligência", "running": true}, {"id": "runner_p", "label": "Runner Parking", "running": false}, {"id": "prometheus", "label": "Prometheus", "running": true}],
-  "top_mem": [{"user": "mssql", "pid": "1811722", "cpu": "13.8", "mem": "20.8", "rss_mb": 3325.0, "cmd": "/opt/mssql/bin/sqlservr"}, {"user": "root", "pid": "1811549", "cpu": "0.0", "mem": "0.4", "rss_mb": 75.7, "cmd": "/usr/lib/systemd/systemd-journald"}, {"user": "viniciu+", "pid": "1811934", "cpu": "0.0", "mem": "0.4", "rss_mb": 74.1, "cmd": "/home/runners/runner_Inteligencia/bin/Runner.Listener run --"}, {"user": "viniciu+", "pid": "1811609", "cpu": "0.0", "mem": "0.3", "rss_mb": 57.6, "cmd": "/home/runners/runner_Energia/bin/Runner.Listener run --start"}, {"user": "matheus", "pid": "1811895", "cpu": "0.0", "mem": "0.3", "rss_mb": 57.2, "cmd": "/home/matheus/actions-runner/bin/Runner.Listener run --start"}, {"user": "prometh+", "pid": "739560", "cpu": "0.2", "mem": "0.3", "rss_mb": 52.8, "cmd": "/usr/local/bin/prometheus --config.file=/etc/prometheus/prom"}, {"user": "root", "pid": "1811664", "cpu": "0.0", "mem": "0.2", "rss_mb": 35.6, "cmd": "/usr/bin/python3 -u bin/WALinuxAgent-2.15.2.1-py3.12.egg -ru"}, {"user": "root", "pid": "929960", "cpu": "0.3", "mem": "0.1", "rss_mb": 27.9, "cmd": "/usr/bin/dockerd -H fd:// --containerd=/run/containerd/conta"}, {"user": "root", "pid": "1232657", "cpu": "0.0", "mem": "0.1", "rss_mb": 25.9, "cmd": "/sbin/multipathd -d -s"}, {"user": "viniciu+", "pid": "1232869", "cpu": "0.0", "mem": "0.1", "rss_mb": 25.4, "cmd": "./externals/node20/bin/node ./bin/RunnerService.js"}],
+  "top_mem": [{"user": "mssql", "pid": "1811722", "cpu": "13.8", "mem": "20.8", "rss_mb": 3321.8, "cmd": "/opt/mssql/bin/sqlservr"}, {"user": "root", "pid": "1811549", "cpu": "0.0", "mem": "0.4", "rss_mb": 76.8, "cmd": "/usr/lib/systemd/systemd-journald"}, {"user": "viniciu+", "pid": "1811934", "cpu": "0.0", "mem": "0.4", "rss_mb": 74.3, "cmd": "/home/runners/runner_Inteligencia/bin/Runner.Listener run --"}, {"user": "viniciu+", "pid": "1811609", "cpu": "0.0", "mem": "0.3", "rss_mb": 57.5, "cmd": "/home/runners/runner_Energia/bin/Runner.Listener run --start"}, {"user": "matheus", "pid": "1811895", "cpu": "0.0", "mem": "0.3", "rss_mb": 57.2, "cmd": "/home/matheus/actions-runner/bin/Runner.Listener run --start"}, {"user": "prometh+", "pid": "739560", "cpu": "0.2", "mem": "0.3", "rss_mb": 52.9, "cmd": "/usr/local/bin/prometheus --config.file=/etc/prometheus/prom"}, {"user": "root", "pid": "1811664", "cpu": "0.0", "mem": "0.2", "rss_mb": 35.6, "cmd": "/usr/bin/python3 -u bin/WALinuxAgent-2.15.2.1-py3.12.egg -ru"}, {"user": "root", "pid": "929960", "cpu": "0.3", "mem": "0.1", "rss_mb": 27.9, "cmd": "/usr/bin/dockerd -H fd:// --containerd=/run/containerd/conta"}, {"user": "root", "pid": "1232657", "cpu": "0.0", "mem": "0.1", "rss_mb": 25.9, "cmd": "/sbin/multipathd -d -s"}, {"user": "viniciu+", "pid": "1232869", "cpu": "0.0", "mem": "0.1", "rss_mb": 25.6, "cmd": "./externals/node20/bin/node ./bin/RunnerService.js"}],
   "disk": [{"mount": "/", "size": "61G", "used": "51G", "avail": "11G", "pct": 83, "level": "warn"}, {"mount": "/mssql/log", "size": "64G", "used": "48G", "avail": "17G", "pct": 74, "level": "warn"}, {"mount": "/mssql/data", "size": "256G", "used": "113G", "avail": "144G", "pct": 45, "level": "ok"}]
 };
 
-const STATUS_UPDATED_AT = "03/08/2026 16:30 BRT";
+const STATUS_UPDATED_AT = "03/08/2026 16:45 BRT";
 
 const DISK_STATUS = [{"mount": "/", "size": "61G", "used": "51G", "avail": "11G", "pct": 83, "level": "warn"}, {"mount": "/mssql/log", "size": "64G", "used": "48G", "avail": "17G", "pct": 74, "level": "warn"}, {"mount": "/mssql/data", "size": "256G", "used": "113G", "avail": "144G", "pct": 45, "level": "ok"}];
 
