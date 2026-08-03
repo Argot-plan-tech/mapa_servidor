@@ -556,7 +556,6 @@ const NODES = [
   { id: "svc_sqlserver",  label: "SQL Server\n:1433",        group: "service", status: "neutral", description: "Microsoft SQL Server rodando no Linux. Hospeda todos os bancos de dados da Argoplan.", info: "Serviço: mssql-server.service\nPorta: 1433\nBancos: DataLake, Parking_Flow, Dimensao, COND_FLOW, OnePage|RMD, ARGO_INTELIGENCIA" },
   { id: "svc_webhook",    label: "Webhook\nServer :9000",    group: "service", status: "neutral", description: "Flask que recebe push do GitHub, valida assinatura HMAC-SHA256 e executa git pull no repositório correspondente.", info: "Arquivo: /home/webhook_server.py\nPorta: 9000\nAuth: HMAC-SHA256 (GITHUB_WEBHOOK_SECRET)\nRepos: OnePageRMD, Parking_Flow, DataLake_Group, inteligencia" },
   { id: "svc_cronlog",    label: "CronLog\nDashboard :5000", group: "service", status: "neutral", description: "Dashboard web de monitoramento de status dos crons em tempo real.", info: "Arquivo: /home/control_cronlog/app.py\nPorta: 5000\nRota /map → este mapa" },
-  { id: "svc_prometheus", label: "Prometheus",               group: "service", status: "neutral", description: "Coleta e expõe métricas do servidor (CPU, memória, disco, rede).", info: "Serviço: prometheus.service" },
 
 ];
 
