@@ -942,7 +942,7 @@ function buildServerView() {
     el.innerHTML = `<div style="color:var(--text2);padding:40px;text-align:center">
       <div style="font-size:32px;margin-bottom:12px">🖥</div>
       <div>Dados do servidor não carregados.</div>
-      <div style="margin-top:8px;font-size:12px">Clique em <strong>↻ Atualizar</strong> com o status_server.py rodando.</div>
+      <div style="margin-top:8px;font-size:12px">Dados atualizados automaticamente a cada 15 min.</div>
     </div>`;
     return;
   }
@@ -1075,50 +1075,8 @@ function toggleTheme() {
 
 // ── REFRESH STATUS (botão) ───────────────────────────────────────────────────
 
-async function refreshStatus() {
-  const btn   = document.getElementById('refresh-btn');
-  const badge = document.getElementById('status-badge');
-  btn.disabled = true;
-  btn.textContent = '↻ Buscando…';
-  badge.textContent = '⏳ carregando…';
-  badge.style.color = 'var(--text2)';
-  try {
-    // Busca status.js com cache-busting
-    const resp = await fetch('status.js?_=' + Date.now(), { signal: AbortSignal.timeout(15000) });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const text = await resp.text();
-    // Executa o JS para extrair as variáveis
-    const fn = new Function(text + '; return { ps: typeof PIPELINE_STATUS !== "undefined" ? PIPELINE_STATUS : null, ss: typeof SERVER_STATUS !== "undefined" ? SERVER_STATUS : null, ua: typeof STATUS_UPDATED_AT !== "undefined" ? STATUS_UPDATED_AT : null };');
-    const { ps, ss, ua } = fn();
-    if (!ps) throw new Error('PIPELINE_STATUS não encontrado');
-
-    // Aplica em memória
-    Object.entries(ps).forEach(([id, p]) => {
-      const node = NODES.find(n => n.id === id);
-      if (!node) return;
-      node.status    = p.status;
-      node._last_run = p.last_run;
-      node._duration = p.duration;
-      node._inserts  = p.inserts;
-      node._error    = p.error;
-      node._history  = p.history  || [];
-      node._last_log = p.last_log || [];
-    });
-    rebuildNetwork(currentFilter);
-    buildPills();
-    if (ss) { window.SERVER_STATUS = ss; if (ss.disk) showDiskBanner(ss.disk); }
-    updateBadge();
-    if (document.getElementById('server-view').classList.contains('active')) buildServerView();
-    badge.textContent = ua ? '✅ ' + ua : '✅ Atualizado';
-    badge.style.color = 'var(--ok)';
-    btn.textContent = '↻ Atualizar';
-    btn.disabled = false;
-  } catch (err) {
-    btn.textContent = '↻ Atualizar';
-    btn.disabled = false;
-    badge.textContent = '❌ ' + err.message;
-    badge.style.color = 'var(--fail)';
-  }
+function refreshStatus() {
+  location.reload();
 }
 
 // ── APPLY STATUS FROM status.js ──────────────────────────────────────────────
