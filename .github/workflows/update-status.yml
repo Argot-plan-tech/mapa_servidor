@@ -22,8 +22,9 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 20.94.160.24 >> ~/.ssh/known_hosts 2>/dev/null
-          echo "Primeiros chars da chave: $(head -c 40 ~/.ssh/id_rsa)"
+          ssh-keyscan -H 20.94.160.24 >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "Chave carregada: $(head -1 ~/.ssh/id_rsa)"
+          echo "Linhas na chave: $(wc -l < ~/.ssh/id_rsa)"
 
       - name: Gerar status.js via servidor
         run: |
