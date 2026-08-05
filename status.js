@@ -6,7 +6,7 @@ const PIPELINE_STATUS = {
   "logpbi": { "status": "ok", "last_run": null, "duration": "0m 20s", "inserts": "137", "error": null, "history": [{"date": "2026-08-04", "status": "ok"}], "last_log": [] },
   "dl_noi": { "status": "ok", "last_run": null, "duration": "2m 5s", "inserts": null, "error": null, "history": [{"date": "2026-08-04", "status": "ok"}], "last_log": [] },
   "energia": { "status": "ok", "last_run": "2026-08-05 06:00", "duration": null, "inserts": "1135", "error": null, "history": [{"date": "2026-08-04", "status": "neutral"}], "last_log": ["2026-08-05 06:00:01,434  INFO      Iniciando INCREMENTAL — 2026-08-02 -> 2026-08-04", "2026-08-05 06:00:02,305  INFO      Token obtido", "2026-08-05 06:00:08,320  INFO      1135 pontos recebidos — PONTA: 192 | FORA_PONTA: 943", "2026-08-05 06:00:08,801  INFO      Concluido — 1135 pontos | 1135 linhas afetadas"] },
-  "svc_gaps": { "status": "neutral", "last_run": null, "duration": null, "inserts": null, "error": null, "history": [], "last_log": [] },
+  "svc_gaps": { "status": "ok", "last_run": "2026-08-05 08:30", "duration": null, "inserts": null, "error": null, "history": [], "last_log": ["[ERRO] Falha ao enviar email: (535, b'5.7.139 Authentication unsuccessful, the request did not meet the criteria to be authenticated successfully. Contact your administrator. [SA9PR10CA0013.namprd10.prod.outlook.com 2026-08-05T08:30:09.977Z 08DEF21961212261]')"] },
   "svc_monitor": { "status": "neutral", "last_run": null, "duration": null, "inserts": null, "error": null, "history": [], "last_log": [] },
   "intel": { "status": "neutral", "last_run": null, "duration": null, "inserts": null, "error": "Execução mensal", "history": [], "last_log": [] },
   "mixlojas": { "status": "neutral", "last_run": null, "duration": null, "inserts": null, "error": "Execução manual", "history": [], "last_log": [] },
@@ -16,21 +16,21 @@ const SERVER_STATUS = {
   "hostname": "vm-database-01",
   "os": "Ubuntu 24.04.4 LTS",
   "kernel": "6.17.0-1008-azure",
-  "cpu_pct": 30.2,
-  "ram_used_gb": 14.4,
+  "cpu_pct": 28.6,
+  "ram_used_gb": 14.2,
   "ram_total_gb": 15.6,
-  "ram_pct": 92.2,
-  "load1": "0.06",
-  "load5": "0.03",
-  "load15": "0.08",
-  "uptime": "139d 7h 33m",
-  "proc_count": 212,
+  "ram_pct": 91.5,
+  "load1": "0.01",
+  "load5": "0.02",
+  "load15": "0.03",
+  "uptime": "139d 7h 48m",
+  "proc_count": 209,
   "services": [{"id": "mssql", "label": "SQL Server :1433", "running": true}, {"id": "webhook", "label": "Webhook :9000", "running": true}, {"id": "cronlog", "label": "CronLog :5000", "running": true}, {"id": "runner_dl", "label": "Runner DataLake", "running": false}, {"id": "runner_e", "label": "Runner Energia", "running": false}, {"id": "runner_i", "label": "Runner Inteligência", "running": true}, {"id": "runner_p", "label": "Runner Parking", "running": false}, {"id": "prometheus", "label": "Prometheus", "running": true}],
-  "top_mem": [{"user": "mssql", "pid": "1811722", "cpu": "13.3", "mem": "23.4", "rss_mb": 3743.5, "cmd": "/opt/mssql/bin/sqlservr"}, {"user": "matheus", "pid": "1811895", "cpu": "0.0", "mem": "0.5", "rss_mb": 81.8, "cmd": "/home/matheus/actions-runner/bin/Runner.Listener run --start"}, {"user": "viniciu+", "pid": "1811609", "cpu": "0.0", "mem": "0.3", "rss_mb": 62.0, "cmd": "/home/runners/runner_Energia/bin/Runner.Listener run --start"}, {"user": "root", "pid": "1820247", "cpu": "0.0", "mem": "0.3", "rss_mb": 58.9, "cmd": "/usr/libexec/fwupd/fwupd"}, {"user": "viniciu+", "pid": "1811934", "cpu": "0.0", "mem": "0.3", "rss_mb": 54.3, "cmd": "/home/runners/runner_Inteligencia/bin/Runner.Listener run --"}, {"user": "prometh+", "pid": "739560", "cpu": "0.2", "mem": "0.2", "rss_mb": 44.9, "cmd": "/usr/local/bin/prometheus --config.file=/etc/prometheus/prom"}, {"user": "root", "pid": "1811549", "cpu": "0.0", "mem": "0.2", "rss_mb": 35.3, "cmd": "/usr/lib/systemd/systemd-journald"}, {"user": "root", "pid": "1811664", "cpu": "0.0", "mem": "0.2", "rss_mb": 34.9, "cmd": "/usr/bin/python3 -u bin/WALinuxAgent-2.15.2.1-py3.12.egg -ru"}, {"user": "viniciu+", "pid": "2710925", "cpu": "11.4", "mem": "0.1", "rss_mb": 28.8, "cmd": "/home/Parking_Flow/.venv/bin/python /home/Parking_Flow/monit"}, {"user": "root", "pid": "929960", "cpu": "0.3", "mem": "0.1", "rss_mb": 26.6, "cmd": "/usr/bin/dockerd -H fd:// --containerd=/run/containerd/conta"}],
+  "top_mem": [{"user": "mssql", "pid": "1811722", "cpu": "13.3", "mem": "23.2", "rss_mb": 3710.2, "cmd": "/opt/mssql/bin/sqlservr"}, {"user": "matheus", "pid": "1811895", "cpu": "0.0", "mem": "0.5", "rss_mb": 81.4, "cmd": "/home/matheus/actions-runner/bin/Runner.Listener run --start"}, {"user": "viniciu+", "pid": "1811609", "cpu": "0.0", "mem": "0.3", "rss_mb": 61.8, "cmd": "/home/runners/runner_Energia/bin/Runner.Listener run --start"}, {"user": "root", "pid": "1820247", "cpu": "0.0", "mem": "0.3", "rss_mb": 58.6, "cmd": "/usr/libexec/fwupd/fwupd"}, {"user": "viniciu+", "pid": "1811934", "cpu": "0.0", "mem": "0.3", "rss_mb": 54.3, "cmd": "/home/runners/runner_Inteligencia/bin/Runner.Listener run --"}, {"user": "prometh+", "pid": "739560", "cpu": "0.2", "mem": "0.2", "rss_mb": 44.9, "cmd": "/usr/local/bin/prometheus --config.file=/etc/prometheus/prom"}, {"user": "root", "pid": "1811549", "cpu": "0.0", "mem": "0.2", "rss_mb": 36.8, "cmd": "/usr/lib/systemd/systemd-journald"}, {"user": "root", "pid": "1811664", "cpu": "0.0", "mem": "0.2", "rss_mb": 34.9, "cmd": "/usr/bin/python3 -u bin/WALinuxAgent-2.15.2.1-py3.12.egg -ru"}, {"user": "root", "pid": "929960", "cpu": "0.3", "mem": "0.1", "rss_mb": 26.6, "cmd": "/usr/bin/dockerd -H fd:// --containerd=/run/containerd/conta"}, {"user": "root", "pid": "1232657", "cpu": "0.0", "mem": "0.1", "rss_mb": 25.7, "cmd": "/sbin/multipathd -d -s"}],
   "disk": [{"mount": "/", "size": "61G", "used": "53G", "avail": "8.0G", "pct": 87, "level": "critical"}, {"mount": "/mssql/log", "size": "64G", "used": "48G", "avail": "17G", "pct": 74, "level": "warn"}, {"mount": "/mssql/data", "size": "256G", "used": "113G", "avail": "144G", "pct": 45, "level": "ok"}]
 };
 
-const STATUS_UPDATED_AT = "05/08/2026 05:30 BRT";
+const STATUS_UPDATED_AT = "05/08/2026 05:45 BRT";
 
 const DISK_STATUS = [{"mount": "/", "size": "61G", "used": "53G", "avail": "8.0G", "pct": 87, "level": "critical"}, {"mount": "/mssql/log", "size": "64G", "used": "48G", "avail": "17G", "pct": 74, "level": "warn"}, {"mount": "/mssql/data", "size": "256G", "used": "113G", "avail": "144G", "pct": 45, "level": "ok"}];
 
