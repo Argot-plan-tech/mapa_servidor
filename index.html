@@ -1202,20 +1202,25 @@ function applyStatuses() {
 
 function showDiskBanner(diskArr) {
   const banner = document.getElementById('disk-banner');
-  const sv = (typeof SERVER_STATUS !== 'undefined') ? SERVER_STATUS : null;
-  const ramPct   = sv ? sv.ram_pct : 0;
-  const ramLevel = ramPct >= 85 ? 'critical' : ramPct >= 70 ? 'warn' : 'ok';
+  const sv   = (typeof SERVER_STATUS     !== 'undefined') ? SERVER_STATUS     : null;
+  const svl  = (typeof SERVER_STATUS_LAB !== 'undefined') ? SERVER_STATUS_LAB : null;
+  const dskl = (typeof DISK_STATUS_LAB   !== 'undefined') ? DISK_STATUS_LAB   : [];
 
-  if (!diskArr || !diskArr.length) { banner.style.display = 'none'; return; }
+  const ramPct   = sv  ? sv.ram_pct  : 0;
+  const ramPctL  = svl ? svl.ram_pct : 0;
+  const ramLevel = ramPct  >= 85 ? 'critical' : ramPct  >= 70 ? 'warn' : 'ok';
+  const ramLevelL= ramPctL >= 85 ? 'critical' : ramPctL >= 70 ? 'warn' : 'ok';
 
-  const hasCritical = diskArr.some(d => d.level === 'critical') || ramLevel === 'critical';
-  const hasWarn     = diskArr.some(d => d.level === 'warn')     || ramLevel === 'warn';
+  const allDisk = [...(diskArr || []), ...dskl];
+  const hasCritical = allDisk.some(d => d.level === 'critical') || ramLevel === 'critical' || ramLevelL === 'critical';
+  const hasWarn     = allDisk.some(d => d.level === 'warn')     || ramLevel === 'warn'     || ramLevelL === 'warn';
+
   if (!hasCritical && !hasWarn) { banner.style.display = 'none'; return; }
 
   banner.className = hasCritical ? 'has-critical' : 'has-warn';
   const icon = hasCritical ? '🔴 ALERTA' : '⚠️ Atenção';
 
-  const diskItems = diskArr.map(d => {
+  const diskItems = (diskArr || []).map(d => {
     const barColor = d.level === 'critical' ? '#f87171' : d.level === 'warn' ? '#fbbf24' : '#34d399';
     return `<span class="disk-item">
       <strong>${d.mount}</strong>
@@ -1234,7 +1239,24 @@ function showDiskBanner(diskArr) {
     </span>`);
   }
 
-  banner.innerHTML = `<span style="font-weight:700">${icon}</span>${[...ramItems, ...diskItems].join('')}`;
+  const labItems = dskl.filter(d => d.level !== 'ok').map(d => {
+    const bc = d.level === 'critical' ? '#f87171' : '#fbbf24';
+    return `<span class="disk-item">
+      <strong style="color:#2dd4bf">Lab:${d.mount}</strong>
+      <span class="disk-bar-wrap"><span class="disk-bar-fill" style="width:${d.pct}%;background:${bc}"></span></span>
+      <span>${d.pct}% (${d.used}/${d.size})</span>
+    </span>`;
+  });
+  if (ramLevelL !== 'ok' && svl) {
+    const bc = ramLevelL === 'critical' ? '#f87171' : '#fbbf24';
+    labItems.unshift(`<span class="disk-item">
+      <strong style="color:#2dd4bf">Lab:RAM</strong>
+      <span class="disk-bar-wrap"><span class="disk-bar-fill" style="width:${ramPctL}%;background:${bc}"></span></span>
+      <span>${ramPctL}% (${svl.ram_used_gb}/${svl.ram_total_gb} GB)</span>
+    </span>`);
+  }
+
+  banner.innerHTML = `<span style="font-weight:700">${icon}</span>${[...ramItems, ...diskItems, ...labItems].join('')}`;
   banner.style.display = 'flex';
 }
 
