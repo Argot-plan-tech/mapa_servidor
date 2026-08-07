@@ -638,6 +638,13 @@ const NODES = [
   { id: "svc_webhook",    label: "Webhook\nServer :9000",    group: "service", status: "neutral", description: "Flask que recebe push do GitHub, valida assinatura HMAC-SHA256 e executa git pull no repositório correspondente.", info: "Arquivo: /home/webhook_server.py\nPorta: 9000\nAuth: HMAC-SHA256 (GITHUB_WEBHOOK_SECRET)\nRepos: OnePageRMD, Parking_Flow, DataLake_Group, inteligencia" },
   { id: "svc_cronlog",    label: "CronLog\nDashboard :5000", group: "service", status: "neutral", description: "Dashboard web de monitoramento de status dos crons em tempo real.", info: "Arquivo: /home/control_cronlog/app.py\nPorta: 5000\nRota /map → este mapa" },
 
+  // ── SERVIDOR LAB ─────────────────────────────────────────────────────────────────
+
+  {
+    id: "servidor_lab", label: "Servidor\nLab", group: "lab", status: "neutral",
+    description: "Servidor Linux de laboratório. Envia seu próprio status ao mapa a cada 15 min via cron push para o GitHub.",
+    info: "IP: 10.0.0.74\nSSH: vinicius@10.0.0.74\nRole: Lab / Dev",
+  },
 ];
 
 // =============================================================================

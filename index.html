@@ -6,6 +6,7 @@
 <title>Mapa do Servidor — Argoplan</title>
 <script src="data.js"></script>
 <script src="status.js"></script>
+<script src="status_lab.js"></script>
 <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
 <style>
 :root {
@@ -120,6 +121,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .badge-monitor    { background: #2d2a10; color: #fbbf24; }
 .badge-runner     { background: #202830; color: #38bdf8; }
 .badge-bi         { background: #2d1a08; color: #fb923c; }
+.badge-lab        { background: #0d2e2a; color: #2dd4bf; }
 [data-theme="light"] .badge-pipeline { background: #e8edf8; color: #3d5afe; }
 [data-theme="light"] .badge-database { background: #e0f2f1; color: #00897b; }
 [data-theme="light"] .badge-external { background: #ffebee; color: #e53935; }
@@ -127,6 +129,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 [data-theme="light"] .badge-monitor  { background: #fff8e1; color: #f57f17; }
 [data-theme="light"] .badge-runner   { background: #e1f5fe; color: #0277bd; }
 [data-theme="light"] .badge-bi      { background: #fff7ed; color: #c2410c; }
+[data-theme="light"] .badge-lab     { background: #f0fdfa; color: #0d9488; }
 
 .section { margin-top: 14px; }
 .section-title {
@@ -379,6 +382,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   <button class="filter-btn" onclick="setFilter('service',this)">Serviços</button>
   <button class="filter-btn" onclick="setFilter('monitor',this)">Monitores</button>
   <button class="filter-btn" onclick="setFilter('bi',this)">BI</button>
+  <button class="filter-btn" onclick="setFilter('lab',this)">Lab</button>
   <div class="sep"></div>
   <button class="view-btn active" id="btn-graph" onclick="setView('graph')">⬡ Grafo</button>
   <button class="view-btn" id="btn-timeline" onclick="setView('timeline')">⏱ Timeline</button>
@@ -449,6 +453,7 @@ const GROUP_COLORS = {
   monitor:  { border:'#fbbf24', background:'#2d2a10', highlight:{border:'#fde68a',background:'#3d3a18'} },
   runner:   { border:'#38bdf8', background:'#0f2d40', highlight:{border:'#7dd3fc',background:'#163d55'} },
   bi:       { border:'#fb923c', background:'#2d1a08', highlight:{border:'#fdba74',background:'#3d2510'} },
+  lab:      { border:'#2dd4bf', background:'#0d2e2a', highlight:{border:'#5eead4',background:'#134e4a'} },
 };
 const GROUP_COLORS_LIGHT = {
   pipeline: { border:'#3d5afe', background:'#e8edf8', highlight:{border:'#1a237e',background:'#c5cae9'} },
@@ -458,11 +463,12 @@ const GROUP_COLORS_LIGHT = {
   monitor:  { border:'#f57f17', background:'#fff8e1', highlight:{border:'#e65100',background:'#ffe082'} },
   runner:   { border:'#0277bd', background:'#e1f5fe', highlight:{border:'#01579b',background:'#b3e5fc'} },
   bi:       { border:'#ea580c', background:'#fff7ed', highlight:{border:'#c2410c',background:'#fed7aa'} },
+  lab:      { border:'#0d9488', background:'#f0fdfa', highlight:{border:'#0f766e',background:'#ccfbf1'} },
 };
 const STATUS_BORDER = { ok:'#34d399', fail:'#f87171', pending:'#fbbf24' };
-const GROUP_FONT_COLOR = { pipeline:'#6c8fff', database:'#34d399', external:'#f87171', service:'#a78bfa', monitor:'#fbbf24', runner:'#38bdf8', bi:'#fb923c' };
-const GROUP_FONT_COLOR_LIGHT = { pipeline:'#1a237e', database:'#004d40', external:'#b71c1c', service:'#4a148c', monitor:'#bf360c', runner:'#01579b', bi:'#c2410c' };
-const BADGE_LABEL = { pipeline:'Pipeline', database:'Banco de Dados', external:'Fonte Externa', service:'Serviço', monitor:'Monitor', runner:'Runner CI/CD', bi:'Relatório BI' };
+const GROUP_FONT_COLOR = { pipeline:'#6c8fff', database:'#34d399', external:'#f87171', service:'#a78bfa', monitor:'#fbbf24', runner:'#38bdf8', bi:'#fb923c', lab:'#2dd4bf' };
+const GROUP_FONT_COLOR_LIGHT = { pipeline:'#1a237e', database:'#004d40', external:'#b71c1c', service:'#4a148c', monitor:'#bf360c', runner:'#01579b', bi:'#c2410c', lab:'#0f766e' };
+const BADGE_LABEL = { pipeline:'Pipeline', database:'Banco de Dados', external:'Fonte Externa', service:'Serviço', monitor:'Monitor', runner:'Runner CI/CD', bi:'Relatório BI', lab:'Servidor Lab' };
 
 let network = null;
 let currentFilter = 'all';
@@ -478,6 +484,7 @@ const GROUP_ICON = {
   monitor:  '📡',
   runner:   '🚀',
   bi:       '📊',
+  lab:      '🖥',
 };
 
 const GROUP_SIZE = {
@@ -488,6 +495,7 @@ const GROUP_SIZE = {
   service:  { font: 11, margin: { top: 8, right:12, bottom: 8, left:12 }, widthConstraint: { minimum: 80  } },
   runner:   { font: 11, margin: { top: 7, right:10, bottom: 7, left:10 }, widthConstraint: { minimum: 70  } },
   bi:       { font: 13, margin: { top:13, right:17, bottom:13, left:17 }, widthConstraint: { minimum: 105 } },
+  lab:      { font: 12, margin: { top:10, right:14, bottom:10, left:14 }, widthConstraint: { minimum: 90  } },
 };
 
 function buildVisNode(n, savedPos) {
@@ -1019,7 +1027,7 @@ function buildServerView() {
       <span class="sv-svc-label">${s.label}</span>
     </div>`).join('');
 
-  el.innerHTML = `
+  let html = `
     <div class="sv-hostname">🖥 ${sv.hostname}</div>
     <div class="sv-meta">${sv.os} &nbsp;·&nbsp; Kernel ${sv.kernel} &nbsp;·&nbsp; Atualizado: ${upd}</div>
 
@@ -1031,6 +1039,69 @@ function buildServerView() {
 
     <div style="margin-top:20px" class="sv-section-title">Serviços</div>
     <div class="sv-svc-grid">${svcItems || '<div style="color:var(--text2);font-size:12px">Sem dados</div>'}</div>`;
+
+  const svl  = (typeof SERVER_STATUS_LAB !== 'undefined') ? SERVER_STATUS_LAB : null;
+  if (svl && Object.keys(svl).length > 0) {
+    const diskl = (typeof DISK_STATUS_LAB !== 'undefined') ? DISK_STATUS_LAB : [];
+    const updl  = (typeof STATUS_UPDATED_AT_LAB !== 'undefined') ? STATUS_UPDATED_AT_LAB : '—';
+    const bc2 = pct => pct >= 85 ? '#f87171' : pct >= 70 ? '#fbbf24' : '#34d399';
+    const cc2 = pct => pct >= 85 ? 'crit' : pct >= 70 ? 'warn' : '';
+    const cpuC2 = bc2(svl.cpu_pct);
+    const ramC2 = bc2(svl.ram_pct);
+    const cards2 = `
+      <div class="sv-card ${cc2(svl.cpu_pct)}">
+        <div class="sv-card-label">CPU</div>
+        <div class="sv-card-value" style="color:${cpuC2}">${svl.cpu_pct}<span style="font-size:14px">%</span></div>
+        <div class="sv-bar-wrap"><div class="sv-bar-fill" style="width:${svl.cpu_pct}%;background:${cpuC2}"></div></div>
+        <div class="sv-card-sub">Load: ${svl.load1} · ${svl.load5} · ${svl.load15}</div>
+      </div>
+      <div class="sv-card ${cc2(svl.ram_pct)}">
+        <div class="sv-card-label">RAM ${svl.ram_pct >= 85 ? '🔴' : svl.ram_pct >= 70 ? '⚠️' : ''}</div>
+        <div class="sv-card-value" style="color:${ramC2}">${svl.ram_pct}<span style="font-size:14px">%</span></div>
+        <div class="sv-bar-wrap"><div class="sv-bar-fill" style="width:${svl.ram_pct}%;background:${ramC2}"></div></div>
+        <div class="sv-card-sub">${svl.ram_used_gb} GB / ${svl.ram_total_gb} GB</div>
+      </div>
+      <div class="sv-card">
+        <div class="sv-card-label">Uptime</div>
+        <div class="sv-card-value" style="font-size:18px;padding-top:4px">${svl.uptime}</div>
+        <div class="sv-card-sub">${svl.proc_count} processos</div>
+      </div>
+      <div class="sv-card">
+        <div class="sv-card-label">Load Average</div>
+        <div class="sv-card-value" style="font-size:22px;padding-top:4px">${svl.load1}</div>
+        <div class="sv-card-sub">5m: ${svl.load5} · 15m: ${svl.load15}</div>
+      </div>`;
+    const diskRows2 = diskl.map(d => {
+      const c2 = bc2(d.pct);
+      const ic = d.level === 'critical' ? ' 🔴' : d.level === 'warn' ? ' ⚠️' : '';
+      return `<div class="sv-disk-row">
+        <div class="sv-disk-mount">${d.mount}${ic}</div>
+        <div class="sv-disk-bar"><div class="sv-disk-bar-fill" style="width:${d.pct}%;background:${c2}"></div></div>
+        <div class="sv-disk-info">${d.pct}% &nbsp;·&nbsp; ${d.used} / ${d.size}</div>
+      </div>`;
+    }).join('');
+    const svcItems2 = (svl.services || []).map(s => `
+      <div class="sv-svc-item">
+        <span class="sv-svc-dot" style="background:${s.running ? '#34d399' : '#f87171'}"></span>
+        <span class="sv-svc-label">${s.label}</span>
+      </div>`).join('');
+    html += `
+      <hr style="border:none;border-top:1px solid var(--border);margin:28px 0">
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="background:#0d2e2a;color:#2dd4bf;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.06em">SERVIDOR LAB</div>
+        <div style="font-size:11px;color:var(--text2)">10.0.0.74</div>
+      </div>
+      <div class="sv-hostname" style="color:#2dd4bf">🖥 ${svl.hostname}</div>
+      <div class="sv-meta">${svl.os} &nbsp;·&nbsp; Kernel ${svl.kernel} &nbsp;·&nbsp; Atualizado: ${updl}</div>
+      <div class="sv-section-title">Métricas do Sistema</div>
+      <div class="sv-grid">${cards2}</div>
+      <div class="sv-section-title">Disco</div>
+      ${diskRows2 || '<div style="color:var(--text2);font-size:12px">Sem dados de disco</div>'}
+      <div style="margin-top:20px" class="sv-section-title">Serviços</div>
+      <div class="sv-svc-grid">${svcItems2 || '<div style="color:var(--text2);font-size:12px">Sem dados</div>'}</div>`;
+  }
+
+  el.innerHTML = html;
 }
 
 function switchToGraphAndFocus(id) {
@@ -1116,6 +1187,13 @@ function applyStatuses() {
     n._history   = s.history  || [];
     n._last_log  = s.last_log || [];
   });
+  if (typeof SERVER_STATUS_LAB !== 'undefined' && SERVER_STATUS_LAB) {
+    const labNode = NODES.find(n => n.id === 'servidor_lab');
+    if (labNode) {
+      const diskCrit = (typeof DISK_STATUS_LAB !== 'undefined') ? DISK_STATUS_LAB.some(d => d.level === 'critical') : false;
+      labNode.status = (diskCrit || SERVER_STATUS_LAB.ram_pct >= 90) ? 'fail' : 'ok';
+    }
+  }
   showDiskBanner(typeof DISK_STATUS !== 'undefined' ? DISK_STATUS : []);
   updateBadge();
 }
