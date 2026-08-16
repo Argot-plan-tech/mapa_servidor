@@ -7,17 +7,17 @@ const SERVER_STATUS_LAB = {
   "ram_used_gb":  10.1,
   "ram_total_gb": 15.0,
   "ram_pct":      66.9,
-  "load1":        "0.33",
-  "load5":        "0.52",
-  "load15":       "0.57",
-  "uptime":       "9d 16h 41m",
-  "proc_count":   267,
+  "load1":        "0.59",
+  "load5":        "0.66",
+  "load15":       "0.62",
+  "uptime":       "9d 16h 56m",
+  "proc_count":   271,
   "services":     [],
-  "top_mem":      [{"user": "huskar", "pid": "379808", "cpu": "1.7", "mem": "24.4", "rss_mb": 3764.6, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85778", "cpu": "0.8", "mem": "7.3", "rss_mb": 1132.8, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "15375", "cpu": "0.3", "mem": "4.6", "rss_mb": 711.5, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "root", "pid": "84359", "cpu": "0.6", "mem": "4.6", "rss_mb": 708.8, "cmd": "/usr/bin/mono --debug --runtime=v4.0 UnixService.exe"}, {"user": "huskar", "pid": "85051", "cpu": "0.3", "mem": "4.4", "rss_mb": 684.3, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "86386", "cpu": "0.5", "mem": "3.8", "rss_mb": 586.3, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85816", "cpu": "1.1", "mem": "3.5", "rss_mb": 550.5, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "379488", "cpu": "0.2", "mem": "2.5", "rss_mb": 399.1, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -classpath /ap"}, {"user": "root", "pid": "71353", "cpu": "8.0", "mem": "1.7", "rss_mb": 275.7, "cmd": "kube-apiserver --advertise-address=172.18.0.2 --allow-privil"}, {"user": "huskar", "pid": "15118", "cpu": "6.5", "mem": "1.5", "rss_mb": 233.8, "cmd": "temporal-server --env docker start"}],
+  "top_mem":      [{"user": "huskar", "pid": "379808", "cpu": "1.7", "mem": "24.4", "rss_mb": 3764.6, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85778", "cpu": "0.8", "mem": "7.3", "rss_mb": 1132.8, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "root", "pid": "84359", "cpu": "0.6", "mem": "4.6", "rss_mb": 715.5, "cmd": "/usr/bin/mono --debug --runtime=v4.0 UnixService.exe"}, {"user": "huskar", "pid": "15375", "cpu": "0.3", "mem": "4.6", "rss_mb": 711.5, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85051", "cpu": "0.3", "mem": "4.4", "rss_mb": 684.3, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "86386", "cpu": "0.5", "mem": "3.8", "rss_mb": 586.3, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85816", "cpu": "1.1", "mem": "3.5", "rss_mb": 550.5, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "379488", "cpu": "0.2", "mem": "2.5", "rss_mb": 399.1, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -classpath /ap"}, {"user": "root", "pid": "71353", "cpu": "8.0", "mem": "1.7", "rss_mb": 275.7, "cmd": "kube-apiserver --advertise-address=172.18.0.2 --allow-privil"}, {"user": "huskar", "pid": "15118", "cpu": "6.5", "mem": "1.5", "rss_mb": 233.8, "cmd": "temporal-server --env docker start"}],
   "disk":         [{"mount": "/", "size": "98G", "used": "28G", "avail": "66G", "pct": 30, "level": "ok"}]
 };
 
 const DISK_STATUS_LAB = [{"mount": "/", "size": "98G", "used": "28G", "avail": "66G", "pct": 30, "level": "ok"}];
 
-const STATUS_UPDATED_AT_LAB = "16/08/2026 10:15 BRT";
+const STATUS_UPDATED_AT_LAB = "16/08/2026 10:30 BRT";
 
