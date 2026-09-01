@@ -3,14 +3,14 @@ const SERVER_STATUS_LAB = {
   "hostname":     "argotech",
   "os":           "Ubuntu 26.04 LTS",
   "kernel":       "7.0.0-29-generic",
-  "cpu_pct":      96.0,
+  "cpu_pct":      95.0,
   "ram_used_gb":  6.5,
   "ram_total_gb": 15.0,
   "ram_pct":      43.0,
-  "load1":        "1.05",
-  "load5":        "0.78",
-  "load15":       "0.71",
-  "uptime":       "26d 1h 56m",
+  "load1":        "1.12",
+  "load5":        "1.00",
+  "load15":       "0.80",
+  "uptime":       "26d 2h 11m",
   "proc_count":   260,
   "services":     [],
   "top_mem":      [{"user": "huskar", "pid": "85778", "cpu": "0.7", "mem": "8.2", "rss_mb": 1266.9, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "15375", "cpu": "0.3", "mem": "4.9", "rss_mb": 767.3, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85051", "cpu": "0.3", "mem": "4.6", "rss_mb": 710.5, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "86386", "cpu": "0.5", "mem": "4.0", "rss_mb": 624.0, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85816", "cpu": "1.0", "mem": "3.6", "rss_mb": 562.5, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "root", "pid": "71353", "cpu": "7.8", "mem": "1.7", "rss_mb": 263.0, "cmd": "kube-apiserver --advertise-address=172.18.0.2 --allow-privil"}, {"user": "huskar", "pid": "15118", "cpu": "6.3", "mem": "1.5", "rss_mb": 241.6, "cmd": "temporal-server --env docker start"}, {"user": "vinicius", "pid": "788916", "cpu": "0.5", "mem": "1.3", "rss_mb": 204.3, "cmd": "/home/dagster/env/bin/python3 -m dagster_webserver --port 30"}, {"user": "vinicius", "pid": "788917", "cpu": "1.7", "mem": "1.1", "rss_mb": 172.6, "cmd": "/home/dagster/env/bin/python3 -m dagster._daemon run --log-l"}, {"user": "vinicius", "pid": "788453", "cpu": "1.0", "mem": "0.9", "rss_mb": 152.5, "cmd": "/home/dagster/env/bin/python3 -m dagster api grpc --lazy-loa"}],
@@ -19,5 +19,5 @@ const SERVER_STATUS_LAB = {
 
 const DISK_STATUS_LAB = [{"mount": "/", "size": "98G", "used": "29G", "avail": "64G", "pct": 32, "level": "ok"}];
 
-const STATUS_UPDATED_AT_LAB = "01/09/2026 19:30 BRT";
+const STATUS_UPDATED_AT_LAB = "01/09/2026 19:45 BRT";
 
