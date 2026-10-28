@@ -3,21 +3,21 @@ const SERVER_STATUS_LAB = {
   "hostname":     "argotech",
   "os":           "Ubuntu 26.04 LTS",
   "kernel":       "7.0.0-29-generic",
-  "cpu_pct":      93.0,
-  "ram_used_gb":  6.8,
+  "cpu_pct":      91.0,
+  "ram_used_gb":  6.9,
   "ram_total_gb": 15.0,
-  "ram_pct":      45.3,
-  "load1":        "1.43",
-  "load5":        "1.32",
-  "load15":       "1.09",
-  "uptime":       "82d 3h 11m",
-  "proc_count":   266,
+  "ram_pct":      45.7,
+  "load1":        "1.05",
+  "load5":        "1.27",
+  "load15":       "1.15",
+  "uptime":       "82d 3h 26m",
+  "proc_count":   292,
   "services":     [],
-  "top_mem":      [{"user": "huskar", "pid": "85778", "cpu": "0.6", "mem": "8.2", "rss_mb": 1276.3, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "15375", "cpu": "0.3", "mem": "4.9", "rss_mb": 754.9, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85051", "cpu": "0.3", "mem": "4.7", "rss_mb": 726.8, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "86386", "cpu": "0.5", "mem": "4.0", "rss_mb": 620.8, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85816", "cpu": "1.0", "mem": "3.7", "rss_mb": 574.6, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "root", "pid": "2695003", "cpu": "0.5", "mem": "2.7", "rss_mb": 427.4, "cmd": "/usr/bin/mono --debug --runtime=v4.0 UnixService.exe"}, {"user": "root", "pid": "71353", "cpu": "7.7", "mem": "1.7", "rss_mb": 264.3, "cmd": "kube-apiserver --advertise-address=172.18.0.2 --allow-privil"}, {"user": "huskar", "pid": "15118", "cpu": "6.1", "mem": "1.5", "rss_mb": 239.1, "cmd": "temporal-server --env docker start"}, {"user": "vinicius", "pid": "788916", "cpu": "0.5", "mem": "1.3", "rss_mb": 204.3, "cmd": "/home/dagster/env/bin/python3 -m dagster_webserver --port 30"}, {"user": "vinicius", "pid": "788917", "cpu": "1.7", "mem": "1.1", "rss_mb": 174.1, "cmd": "/home/dagster/env/bin/python3 -m dagster._daemon run --log-l"}],
+  "top_mem":      [{"user": "huskar", "pid": "85778", "cpu": "0.6", "mem": "8.2", "rss_mb": 1276.3, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "15375", "cpu": "0.3", "mem": "4.9", "rss_mb": 754.9, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85051", "cpu": "0.3", "mem": "4.7", "rss_mb": 726.8, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "86386", "cpu": "0.5", "mem": "4.0", "rss_mb": 620.8, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "huskar", "pid": "85816", "cpu": "1.0", "mem": "3.7", "rss_mb": 574.6, "cmd": "/usr/lib/jvm/java-21-amazon-corretto/bin/java -XX:+ExitOnOut"}, {"user": "root", "pid": "2695003", "cpu": "0.5", "mem": "2.7", "rss_mb": 428.1, "cmd": "/usr/bin/mono --debug --runtime=v4.0 UnixService.exe"}, {"user": "root", "pid": "71353", "cpu": "7.7", "mem": "1.7", "rss_mb": 264.3, "cmd": "kube-apiserver --advertise-address=172.18.0.2 --allow-privil"}, {"user": "huskar", "pid": "15118", "cpu": "6.1", "mem": "1.5", "rss_mb": 239.1, "cmd": "temporal-server --env docker start"}, {"user": "vinicius", "pid": "788916", "cpu": "0.5", "mem": "1.3", "rss_mb": 204.3, "cmd": "/home/dagster/env/bin/python3 -m dagster_webserver --port 30"}, {"user": "vinicius", "pid": "788917", "cpu": "1.7", "mem": "1.1", "rss_mb": 174.1, "cmd": "/home/dagster/env/bin/python3 -m dagster._daemon run --log-l"}],
   "disk":         [{"mount": "/", "size": "98G", "used": "29G", "avail": "65G", "pct": 32, "level": "ok"}]
 };
 
 const DISK_STATUS_LAB = [{"mount": "/", "size": "98G", "used": "29G", "avail": "65G", "pct": 32, "level": "ok"}];
 
-const STATUS_UPDATED_AT_LAB = "27/10/2026 20:45 BRT";
+const STATUS_UPDATED_AT_LAB = "27/10/2026 21:00 BRT";
 
